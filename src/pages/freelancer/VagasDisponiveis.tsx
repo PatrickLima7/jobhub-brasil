@@ -23,7 +23,7 @@ export default function VagasDisponiveis() {
       
       const enriched = await Promise.all(
         (data ?? []).map(async (job) => {
-          const { data: company } = await supabase.from('company_profiles').select('nome').eq('user_id', job.company_id).single();
+          const { data: company } = await supabase.from('company_profiles').select('nome').eq('user_id', job.company_id).maybeSingle();
           return { ...job, empresa_nome: company?.nome ?? 'Empresa' };
         })
       );

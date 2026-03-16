@@ -25,7 +25,7 @@ export default function UltimosContratados() {
 
       const enriched = await Promise.all(
         (apps ?? []).map(async (app) => {
-          const { data: profile } = await supabase.from('freelancer_profiles').select('nome').eq('user_id', app.freelancer_id).single();
+          const { data: profile } = await supabase.from('freelancer_profiles').select('nome').eq('user_id', app.freelancer_id).maybeSingle();
           const job = jobs?.find(j => j.id === app.job_id);
           return {
             ...app,
