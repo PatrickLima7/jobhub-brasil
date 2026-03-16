@@ -4,8 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Building2, User } from 'lucide-react';
 
 export default function Auth() {
   const { user, role, loading } = useAuth();
@@ -17,7 +17,7 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
   const { signIn, signUp } = useAuth();
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center"><p>Carregando...</p></div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Carregando...</p></div>;
   if (user && role) return <Navigate to={role === 'company' ? '/empresa' : '/freelancer'} replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,45 +38,51 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-            <span className="text-xl font-bold text-primary-foreground">S</span>
-          </div>
-          <CardTitle className="text-2xl">ShiftHub</CardTitle>
-          <CardDescription>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="w-full max-w-[400px]">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold tracking-tight">ShiftHub</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {isLogin ? 'Acesse sua conta' : 'Crie sua conta'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          </p>
+        </div>
+
+        <div className="border rounded-lg p-6 bg-card">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label>Eu sou</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
+              <div className="space-y-1.5">
+                <Label className="text-[13px] font-medium text-muted-foreground">Eu sou</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
                     type="button"
-                    variant={selectedRole === 'company' ? 'default' : 'outline'}
                     onClick={() => setSelectedRole('company')}
-                    className="w-full"
+                    className={`flex items-center justify-center gap-2 h-11 rounded-md border text-sm font-medium transition-colors ${
+                      selectedRole === 'company'
+                        ? 'border-foreground bg-foreground text-background'
+                        : 'border-border bg-background text-foreground hover:bg-secondary'
+                    }`}
                   >
-                    🏢 Sou Empresa
-                  </Button>
-                  <Button
+                    <Building2 className="h-4 w-4" />
+                    Empresa
+                  </button>
+                  <button
                     type="button"
-                    variant={selectedRole === 'freelancer' ? 'default' : 'outline'}
                     onClick={() => setSelectedRole('freelancer')}
-                    className="w-full"
+                    className={`flex items-center justify-center gap-2 h-11 rounded-md border text-sm font-medium transition-colors ${
+                      selectedRole === 'freelancer'
+                        ? 'border-foreground bg-foreground text-background'
+                        : 'border-border bg-background text-foreground hover:bg-secondary'
+                    }`}
                   >
-                    👤 Sou Freelancer
-                  </Button>
+                    <User className="h-4 w-4" />
+                    Freelancer
+                  </button>
                 </div>
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-[13px] font-medium text-muted-foreground">E-mail</Label>
               <Input
                 id="email"
                 type="email"
@@ -87,8 +93,8 @@ export default function Auth() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-[13px] font-medium text-muted-foreground">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -105,17 +111,17 @@ export default function Auth() {
             </Button>
           </form>
 
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+          <div className="mt-5 text-center text-sm text-muted-foreground">
             {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
             <button
               onClick={() => setIsLogin(!isLogin)}
-              className="text-primary underline hover:no-underline"
+              className="text-foreground font-medium underline underline-offset-4 hover:no-underline"
             >
               {isLogin ? 'Cadastre-se' : 'Fazer login'}
             </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

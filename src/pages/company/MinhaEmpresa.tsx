@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
@@ -57,82 +56,80 @@ export default function MinhaEmpresa() {
 
   const updateField = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading) return <p className="text-muted-foreground">Carregando...</p>;
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Minha Empresa</h1>
-      <Card>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome da empresa</Label>
-              <Input value={form.nome} onChange={e => updateField('nome', e.target.value)} />
+      <h1 className="text-display mb-8">Minha Empresa</h1>
+      <div className="border rounded-lg p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Nome da empresa</Label>
+            <Input value={form.nome} onChange={e => updateField('nome', e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">CNPJ</Label>
+            <Input placeholder="00.000.000/0000-00" value={form.cnpj} onChange={e => updateField('cnpj', e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Tipo de estabelecimento</Label>
+            <Select value={form.tipo} onValueChange={v => updateField('tipo', v)}>
+              <SelectTrigger className="bg-secondary"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">Bar</SelectItem>
+                <SelectItem value="restaurante">Restaurante</SelectItem>
+                <SelectItem value="buffet">Buffet</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Telefone</Label>
+              <Input value={form.telefone} onChange={e => updateField('telefone', e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>CNPJ</Label>
-              <Input placeholder="00.000.000/0000-00" value={form.cnpj} onChange={e => updateField('cnpj', e.target.value)} />
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">E-mail comercial</Label>
+              <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>Tipo de estabelecimento</Label>
-              <Select value={form.tipo} onValueChange={v => updateField('tipo', v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bar">Bar</SelectItem>
-                  <SelectItem value="restaurante">Restaurante</SelectItem>
-                  <SelectItem value="buffet">Buffet</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
-                </SelectContent>
-              </Select>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Rua</Label>
+              <Input value={form.endereco_rua} onChange={e => updateField('endereco_rua', e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <Input value={form.telefone} onChange={e => updateField('telefone', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>E-mail comercial</Label>
-                <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} />
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Número</Label>
+              <Input value={form.endereco_numero} onChange={e => updateField('endereco_numero', e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Rua</Label>
-                <Input value={form.endereco_rua} onChange={e => updateField('endereco_rua', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Número</Label>
-                <Input value={form.endereco_numero} onChange={e => updateField('endereco_numero', e.target.value)} />
-              </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Bairro</Label>
+              <Input value={form.endereco_bairro} onChange={e => updateField('endereco_bairro', e.target.value)} />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Bairro</Label>
-                <Input value={form.endereco_bairro} onChange={e => updateField('endereco_bairro', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Cidade</Label>
-                <Input value={form.endereco_cidade} onChange={e => updateField('endereco_cidade', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Estado</Label>
-                <Input value={form.endereco_estado} onChange={e => updateField('endereco_estado', e.target.value)} />
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Cidade</Label>
+              <Input value={form.endereco_cidade} onChange={e => updateField('endereco_cidade', e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>CEP</Label>
-              <Input value={form.endereco_cep} onChange={e => updateField('endereco_cep', e.target.value)} />
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Estado</Label>
+              <Input value={form.endereco_estado} onChange={e => updateField('endereco_estado', e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea value={form.descricao} onChange={e => updateField('descricao', e.target.value)} />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">CEP</Label>
+            <Input value={form.endereco_cep} onChange={e => updateField('endereco_cep', e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Descrição</Label>
+            <Textarea className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background" value={form.descricao} onChange={e => updateField('descricao', e.target.value)} />
+          </div>
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

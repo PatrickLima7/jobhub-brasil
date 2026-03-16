@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -59,81 +58,79 @@ export default function PublicarVaga() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Publicar Vaga</h1>
-      <Card>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Função</Label>
-              <Input placeholder="Ex: Garçom, Bartender" value={funcao} onChange={e => setFuncao(e.target.value)} required />
-            </div>
+      <h1 className="text-display mb-8">Publicar Vaga</h1>
+      <div className="border rounded-lg p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Função</Label>
+            <Input placeholder="Ex: Garçom, Bartender" value={funcao} onChange={e => setFuncao(e.target.value)} required />
+          </div>
 
-            <div className="space-y-2">
-              <Label>Descrição da vaga</Label>
-              <Textarea placeholder="Descreva a vaga..." value={descricao} onChange={e => setDescricao(e.target.value)} />
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Descrição da vaga</Label>
+            <Textarea className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background min-h-[100px]" placeholder="Descreva a vaga..." value={descricao} onChange={e => setDescricao(e.target.value)} />
+          </div>
 
-            <div className="space-y-2">
-              <Label>Data do evento/serviço</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn('w-full justify-start text-left', !dataEvento && 'text-muted-foreground')}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dataEvento ? format(dataEvento, "dd/MM/yyyy", { locale: ptBR }) : 'Selecione a data'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={dataEvento} onSelect={setDataEvento} className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Data do evento/serviço</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn('w-full justify-start text-left font-normal bg-secondary', !dataEvento && 'text-muted-foreground')}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dataEvento ? format(dataEvento, "dd/MM/yyyy", { locale: ptBR }) : 'Selecione a data'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={dataEvento} onSelect={setDataEvento} className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Horário de início</Label>
-                <Input type="time" value={horarioInicio} onChange={e => setHorarioInicio(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Horário de início</Label>
+              <Input type="time" value={horarioInicio} onChange={e => setHorarioInicio(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-muted-foreground">Horário de fim</Label>
+              <Input type="time" value={horarioFim} onChange={e => setHorarioFim(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Valor ofertado (R$)</Label>
+            <Input type="number" step="0.01" min="0" placeholder="150.00" value={valor} onChange={e => setValor(e.target.value)} required />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Tipo de pagamento</Label>
+            <RadioGroup value={tipoPagamento} onValueChange={setTipoPagamento}>
+              <div className="flex gap-4">
+                {[['diaria', 'Diária'], ['hora', 'Por hora'], ['combinar', 'A combinar']].map(([v, l]) => (
+                  <div key={v} className="flex items-center space-x-2">
+                    <RadioGroupItem value={v} id={v} />
+                    <Label htmlFor={v} className="text-sm">{l}</Label>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-2">
-                <Label>Horário de fim</Label>
-                <Input type="time" value={horarioFim} onChange={e => setHorarioFim(e.target.value)} />
-              </div>
-            </div>
+            </RadioGroup>
+          </div>
 
-            <div className="space-y-2">
-              <Label>Valor ofertado (R$)</Label>
-              <Input type="number" step="0.01" min="0" placeholder="150.00" value={valor} onChange={e => setValor(e.target.value)} required />
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Número de vagas</Label>
+            <Input type="number" min="1" value={numVagas} onChange={e => setNumVagas(e.target.value)} required />
+          </div>
 
-            <div className="space-y-2">
-              <Label>Tipo de pagamento</Label>
-              <RadioGroup value={tipoPagamento} onValueChange={setTipoPagamento}>
-                <div className="flex gap-4">
-                  {[['diaria', 'Diária'], ['hora', 'Por hora'], ['combinar', 'A combinar']].map(([v, l]) => (
-                    <div key={v} className="flex items-center space-x-2">
-                      <RadioGroupItem value={v} id={v} />
-                      <Label htmlFor={v}>{l}</Label>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-muted-foreground">Requisitos (opcional)</Label>
+            <Textarea className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background" placeholder="Requisitos..." value={requisitos} onChange={e => setRequisitos(e.target.value)} />
+          </div>
 
-            <div className="space-y-2">
-              <Label>Número de vagas</Label>
-              <Input type="number" min="1" value={numVagas} onChange={e => setNumVagas(e.target.value)} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Requisitos (opcional)</Label>
-              <Textarea placeholder="Requisitos..." value={requisitos} onChange={e => setRequisitos(e.target.value)} />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Publicando...' : 'Publicar Vaga'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? 'Publicando...' : 'Publicar Vaga'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Briefcase, Users, CheckCircle, XCircle } from 'lucide-react';
 
@@ -54,55 +53,50 @@ export default function CompanyDashboard() {
   }, [user]);
 
   const cards = [
-    { title: 'Vagas Ativas', value: stats.ativas, icon: Briefcase, color: 'text-primary' },
-    { title: 'Candidaturas Recebidas', value: stats.candidaturas, icon: Users, color: 'text-blue-500' },
-    { title: 'Freelancers Contratados', value: stats.contratados, icon: CheckCircle, color: 'text-green-500' },
-    { title: 'Vagas Encerradas', value: stats.encerradas, icon: XCircle, color: 'text-muted-foreground' },
+    { title: 'VAGAS ATIVAS', value: stats.ativas, icon: Briefcase },
+    { title: 'CANDIDATURAS', value: stats.candidaturas, icon: Users },
+    { title: 'CONTRATADOS', value: stats.contratados, icon: CheckCircle },
+    { title: 'ENCERRADAS', value: stats.encerradas, icon: XCircle },
   ];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-8">
+      <h1 className="text-display">Dashboard</h1>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
-          <Card key={c.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{c.title}</CardTitle>
-              <c.icon className={`h-5 w-5 ${c.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{c.value}</div>
-            </CardContent>
-          </Card>
+          <div key={c.title} className="border rounded-lg p-6">
+            <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-3">{c.title}</p>
+            <p className="text-[32px] font-bold leading-none">{c.value}</p>
+          </div>
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Atividade Recente</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="border rounded-lg">
+        <div className="p-6 pb-4">
+          <h2 className="text-heading">Atividade Recente</h2>
+        </div>
+        <div className="px-6 pb-6">
           {recentApps.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhuma candidatura recente.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-0">
               {recentApps.map((app) => (
-                <div key={app.id} className="flex items-center justify-between border-b pb-2 last:border-0">
+                <div key={app.id} className="flex items-center justify-between py-3 border-b last:border-0">
                   <div>
                     <p className="font-medium text-sm">{app.funcao}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[13px] text-muted-foreground">
                       {new Date(app.created_at).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <Badge variant={app.status === 'contratado' ? 'default' : 'secondary'}>
+                  <Badge variant={app.status === 'contratado' ? 'contratado' : app.status === 'aguardando' ? 'aguardando' : 'default'}>
                     {app.status}
                   </Badge>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
