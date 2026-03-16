@@ -51,11 +51,8 @@ export default function MinhasVagas() {
     // Fetch freelancer names separately if join didn't work
     const apps = data ?? [];
     const enriched = await Promise.all(apps.map(async (app) => {
-      if (!app.freelancer_profiles) {
-        const { data: profile } = await supabase.from('freelancer_profiles').select('nome').eq('user_id', app.freelancer_id).maybeSingle();
-        return { ...app, freelancer_nome: profile?.nome ?? 'Sem nome' };
-      }
-      return { ...app, freelancer_nome: (app.freelancer_profiles as any)?.nome ?? 'Sem nome' };
+      const { data: profile } = await supabase.from('freelancer_profiles').select('nome').eq('user_id', app.freelancer_id).maybeSingle();
+      return { ...app, freelancer_nome: profile?.nome ?? 'Sem nome' };
     }));
     setCandidates(enriched);
     setDrawerOpen(true);
