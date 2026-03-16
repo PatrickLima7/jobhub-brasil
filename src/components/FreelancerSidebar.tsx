@@ -1,6 +1,5 @@
 import { Search, FileText, UserCircle, LogOut } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
-import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -20,14 +19,14 @@ export function FreelancerSidebar() {
   const { signOut } = useAuth();
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <div className="flex h-14 items-center px-4 gap-2">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary">
-          <span className="text-sm font-bold text-sidebar-primary-foreground">S</span>
-        </div>
-        {!collapsed && <span className="font-semibold text-sidebar-foreground">ShiftHub</span>}
+    <Sidebar collapsible="icon" className="border-r-0 hidden md:flex">
+      <div className="flex h-16 items-center px-6 gap-3">
+        <span className="text-xl font-bold text-sidebar-accent-foreground">
+          {collapsed ? 'S' : 'ShiftHub'}
+        </span>
       </div>
-      <SidebarContent>
+      <div className="mx-4 h-px bg-sidebar-border" />
+      <SidebarContent className="pt-4">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -37,11 +36,11 @@ export function FreelancerSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === '/freelancer'}
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      className="flex items-center gap-2.5 px-4 py-2.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground border-l-[3px] border-accent"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -50,9 +49,10 @@ export function FreelancerSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent" onClick={signOut}>
-          <LogOut className="mr-2 h-4 w-4" />
+      <SidebarFooter className="p-4">
+        <div className="h-px bg-sidebar-border mb-4" />
+        <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={signOut}>
+          <LogOut className="mr-2.5 h-4 w-4" />
           {!collapsed && 'Sair'}
         </Button>
       </SidebarFooter>

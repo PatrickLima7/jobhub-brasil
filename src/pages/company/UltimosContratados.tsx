@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export default function UltimosContratados() {
@@ -42,25 +41,23 @@ export default function UltimosContratados() {
   }, [user]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Últimos Contratados</h1>
+    <div className="space-y-8">
+      <h1 className="text-display">Últimos Contratados</h1>
       {contratados.length === 0 ? (
         <p className="text-muted-foreground">Nenhum freelancer contratado ainda.</p>
       ) : (
         <div className="space-y-3">
           {contratados.map((c) => (
-            <Card key={c.id}>
-              <CardContent className="flex items-center justify-between py-4">
-                <div>
-                  <p className="font-medium">{c.nome}</p>
-                  <p className="text-sm text-muted-foreground">{c.funcao} • {c.data_evento && new Date(c.data_evento).toLocaleDateString('pt-BR')}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">R$ {Number(c.valor).toFixed(2)}</p>
-                  <Badge className="mt-1">Contratado</Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={c.id} className="border rounded-lg p-4 md:p-6 flex items-center justify-between">
+              <div>
+                <p className="font-medium">{c.nome}</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">{c.funcao} · {c.data_evento && new Date(c.data_evento).toLocaleDateString('pt-BR')}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">R$ {Number(c.valor).toFixed(2)}</p>
+                <Badge variant="contratado" className="mt-1.5">Contratado</Badge>
+              </div>
+            </div>
           ))}
         </div>
       )}
