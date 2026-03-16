@@ -45,7 +45,7 @@ export default function MinhasVagas() {
     setSelectedJob(job);
     const { data } = await supabase
       .from('applications')
-      .select('*, freelancer_profiles!applications_freelancer_id_fkey(nome)')
+      .select('*')
       .eq('job_id', job.id);
     
     // Fetch freelancer names separately if join didn't work
