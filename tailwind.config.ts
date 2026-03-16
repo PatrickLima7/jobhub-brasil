@@ -58,6 +58,8 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        "orange-accent": "hsl(var(--orange-accent))",
+        "amber-button": "hsl(var(--amber-button))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
