@@ -8,15 +8,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AlertBanner } from '@/components/AlertBanner';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useSystemAlerts } from '@/hooks/useSystemAlerts';
 
 export default function PublicarVaga() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { checkCompanyProfile } = useSystemAlerts();
   const [submitting, setSubmitting] = useState(false);
   const [funcao, setFuncao] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -27,10 +30,19 @@ export default function PublicarVaga() {
   const [tipoPagamento, setTipoPagamento] = useState('diaria');
   const [numVagas, setNumVagas] = useState('1');
   const [requisitos, setRequisitos] = useState('');
+  const [profileAlert, setProfileAlert] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !dataEvento) return;
+
+    const profileCheck = await checkCompanyProfile(user.id);
+    if (!profileCheck.valid) {
+      setProfileAlert(profileCheck.message);
+      return;
+    }
+    setProfileAlert('');
+
     setSubmitting(true);
     try {
       const { error } = await supabase.from('jobs').insert({
@@ -49,8 +61,9 @@ export default function PublicarVaga() {
       toast({ title: 'Vaga publicada com sucesso!' });
       setFuncao(''); setDescricao(''); setDataEvento(undefined); setHorarioInicio('');
       setHorarioFim(''); setValor(''); setNumVagas('1'); setRequisitos('');
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -59,6 +72,13 @@ export default function PublicarVaga() {
   return (
     <div className="max-w-2xl">
       <h1 className="text-display mb-8">Publicar Vaga</h1>
+
+      {profileAlert && (
+        <div className="mb-6">
+          <AlertBanner message={profileAlert} linkTo="/empresa/perfil" linkLabel="Completar perfil" />
+        </div>
+      )}
+
       <div className="border rounded-lg p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">

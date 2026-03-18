@@ -2,12 +2,12 @@ import { Outlet } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { CompanySidebar } from '@/components/CompanySidebar';
 import { BottomNav } from '@/components/BottomNav';
-import { LayoutDashboard, Briefcase, Users, Building2 } from 'lucide-react';
+import { LayoutDashboard, Briefcase, MessageCircle, Building2 } from 'lucide-react';
 
 const bottomItems = [
   { title: 'Dashboard', url: '/empresa', icon: LayoutDashboard, end: true },
   { title: 'Vagas', url: '/empresa/vagas', icon: Briefcase },
-  { title: 'Contratados', url: '/empresa/contratados', icon: Users },
+  { title: 'Chat', url: '/empresa/chat', icon: MessageCircle },
   { title: 'Perfil', url: '/empresa/perfil', icon: Building2 },
 ];
 

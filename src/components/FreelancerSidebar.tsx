@@ -1,4 +1,4 @@
-import { Search, FileText, UserCircle, LogOut } from 'lucide-react';
+import { Search, FileText, UserCircle, LogOut, MessageCircle } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 const items = [
   { title: 'Vagas Disponíveis', url: '/freelancer', icon: Search },
   { title: 'Minhas Candidaturas', url: '/freelancer/candidaturas', icon: FileText },
+  { title: 'Chat', url: '/freelancer/chat', icon: MessageCircle },
   { title: 'Meu Perfil', url: '/freelancer/perfil', icon: UserCircle },
 ];
 
@@ -22,7 +23,7 @@ export function FreelancerSidebar() {
     <Sidebar collapsible="icon" className="border-r-0 hidden md:flex">
       <div className="flex h-16 items-center px-6 gap-3">
         <span className="text-xl font-bold text-sidebar-accent-foreground">
-          {collapsed ? 'S' : 'ShiftHub'}
+          {collapsed ? 'T' : 'TôLivre'}
         </span>
       </div>
       <div className="mx-4 h-px bg-sidebar-border" />

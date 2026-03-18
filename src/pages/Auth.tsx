@@ -30,8 +30,9 @@ export default function Auth() {
         await signUp(email, password, selectedRole);
         toast({ title: 'Conta criada!', description: 'Verifique seu e-mail para confirmar o cadastro.' });
       }
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -41,7 +42,7 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-[400px]">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">ShiftHub</h1>
+          <h1 className="text-2xl font-bold tracking-tight">TôLivre</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {isLogin ? 'Acesse sua conta' : 'Crie sua conta'}
           </p>
@@ -83,27 +84,12 @@ export default function Auth() {
 
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-[13px] font-medium text-muted-foreground">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-[13px] font-medium text-muted-foreground">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
+              <Input id="password" type="password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
 
             <Button type="submit" className="w-full" disabled={submitting}>
