@@ -2,11 +2,12 @@ import { Outlet } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { FreelancerSidebar } from '@/components/FreelancerSidebar';
 import { BottomNav } from '@/components/BottomNav';
-import { Search, FileText, UserCircle } from 'lucide-react';
+import { Search, FileText, MessageCircle, UserCircle } from 'lucide-react';
 
 const bottomItems = [
   { title: 'Vagas', url: '/freelancer', icon: Search, end: true },
   { title: 'Candidaturas', url: '/freelancer/candidaturas', icon: FileText },
+  { title: 'Chat', url: '/freelancer/chat', icon: MessageCircle },
   { title: 'Perfil', url: '/freelancer/perfil', icon: UserCircle },
 ];
 

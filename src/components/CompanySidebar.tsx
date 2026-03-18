@@ -1,4 +1,4 @@
-import { LayoutDashboard, PlusCircle, Briefcase, Users, Building2, LogOut } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Briefcase, Users, Building2, LogOut, MessageCircle } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -12,6 +12,7 @@ const items = [
   { title: 'Publicar Vaga', url: '/empresa/publicar', icon: PlusCircle },
   { title: 'Minhas Vagas', url: '/empresa/vagas', icon: Briefcase },
   { title: 'Contratados', url: '/empresa/contratados', icon: Users },
+  { title: 'Chat', url: '/empresa/chat', icon: MessageCircle },
   { title: 'Minha Empresa', url: '/empresa/perfil', icon: Building2 },
 ];
 
@@ -24,7 +25,7 @@ export function CompanySidebar() {
     <Sidebar collapsible="icon" className="border-r-0 hidden md:flex">
       <div className="flex h-16 items-center px-6 gap-3">
         <span className="text-xl font-bold text-sidebar-accent-foreground">
-          {collapsed ? 'S' : 'ShiftHub'}
+          {collapsed ? 'T' : 'TôLivre'}
         </span>
       </div>
       <div className="mx-4 h-px bg-sidebar-border" />

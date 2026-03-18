@@ -16,6 +16,7 @@ import MinhaEmpresa from "@/pages/company/MinhaEmpresa";
 import VagasDisponiveis from "@/pages/freelancer/VagasDisponiveis";
 import MinhasCandidaturas from "@/pages/freelancer/MinhasCandidaturas";
 import MeuPerfil from "@/pages/freelancer/MeuPerfil";
+import ChatPage from "@/pages/ChatPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,12 +37,14 @@ const App = () => (
               <Route path="publicar" element={<PublicarVaga />} />
               <Route path="vagas" element={<MinhasVagas />} />
               <Route path="contratados" element={<UltimosContratados />} />
+              <Route path="chat" element={<ChatPage />} />
               <Route path="perfil" element={<MinhaEmpresa />} />
             </Route>
 
             <Route path="/freelancer" element={<ProtectedRoute requiredRole="freelancer"><FreelancerLayout /></ProtectedRoute>}>
               <Route index element={<VagasDisponiveis />} />
               <Route path="candidaturas" element={<MinhasCandidaturas />} />
+              <Route path="chat" element={<ChatPage />} />
               <Route path="perfil" element={<MeuPerfil />} />
             </Route>
 
