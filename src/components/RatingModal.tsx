@@ -37,14 +37,14 @@ export function RatingModal({
     if (rating === 0) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('reviews').insert({
+      const { error } = await supabase.from('reviews' as never).insert({
         application_id: applicationId,
         reviewer_id: reviewerId,
         reviewee_id: revieweeId,
         reviewer_role: reviewerRole,
         rating,
         comment: comment || null,
-      });
+      } as never);
       if (error) throw error;
       toast({ title: 'Avaliação enviada!' });
       setRating(0);
