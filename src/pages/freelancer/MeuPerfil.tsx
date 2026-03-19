@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AvatarUpload } from '@/components/AvatarUpload';
 import { useToast } from '@/hooks/use-toast';
 
 const FUNCOES = ['Garçom', 'Garçonete', 'Bartender', 'Cozinheiro', 'Auxiliar de Cozinha', 'Recepcionista', 'Copeiro', 'Outros'];
@@ -51,8 +52,9 @@ export default function MeuPerfil() {
         .eq('user_id', user.id);
       if (error) throw error;
       toast({ title: 'Perfil salvo!' });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -65,6 +67,18 @@ export default function MeuPerfil() {
       <h1 className="text-display mb-8">Meu Perfil</h1>
       <div className="border rounded-lg p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Avatar upload */}
+          {user && (
+            <div className="flex justify-center mb-2">
+              <AvatarUpload
+                userId={user.id}
+                type="freelancer"
+                name={form.nome || 'F'}
+                size={80}
+              />
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-muted-foreground">Nome completo</Label>
             <Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
@@ -136,7 +150,7 @@ export default function MeuPerfil() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" className="w-full btn-press" disabled={submitting}>
             {submitting ? 'Salvando...' : 'Salvar Perfil'}
           </Button>
         </form>
