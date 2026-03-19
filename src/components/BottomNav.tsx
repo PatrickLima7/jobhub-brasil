@@ -22,7 +22,10 @@ export function BottomNav({ items }: BottomNavProps) {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-foreground border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden liquid-glass-nav"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="flex items-center justify-around h-16">
         {items.map((item) => {
           const active = isActive(item.url, item.end);
@@ -31,8 +34,10 @@ export function BottomNav({ items }: BottomNavProps) {
               key={item.title}
               to={item.url}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-2",
-                active ? "text-accent" : "text-muted-foreground"
+                "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-2 transition-colors duration-150",
+                active
+                  ? "text-accent"
+                  : "text-[rgba(255,255,255,0.5)]"
               )}
             >
               <item.icon className="h-5 w-5" />
