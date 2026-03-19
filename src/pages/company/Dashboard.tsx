@@ -3,11 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Briefcase, Users, CheckCircle, XCircle } from 'lucide-react';
+import { StaggerContainer, StaggerItem } from '@/components/PageTransition';
 
 export default function CompanyDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ ativas: 0, candidaturas: 0, contratados: 0, encerradas: 0 });
-  const [recentApps, setRecentApps] = useState<any[]>([]);
+  const [recentApps, setRecentApps] = useState<Array<{
+    id: string;
+    status: string;
+    created_at: string;
+    funcao: string;
+  }>>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -62,14 +68,16 @@ export default function CompanyDashboard() {
   return (
     <div className="space-y-8">
       <h1 className="text-display">Dashboard</h1>
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <StaggerContainer className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
-          <div key={c.title} className="border rounded-lg p-6">
-            <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-3">{c.title}</p>
-            <p className="text-[32px] font-bold leading-none">{c.value}</p>
-          </div>
+          <StaggerItem key={c.title}>
+            <div className="border rounded-lg p-6">
+              <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-3">{c.title}</p>
+              <p className="text-[32px] font-bold leading-none">{c.value}</p>
+            </div>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerContainer>
 
       <div className="border rounded-lg">
         <div className="p-6 pb-4">

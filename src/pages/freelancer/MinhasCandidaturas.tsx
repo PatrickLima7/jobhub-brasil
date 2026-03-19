@@ -3,10 +3,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StaggerContainer, StaggerItem, FloatingIcon } from '@/components/PageTransition';
+import { FileText } from 'lucide-react';
+
+interface AppData {
+  id: string;
+  status: string;
+  created_at: string;
+  funcao: string;
+  data_evento: string | undefined;
+  valor: number | undefined;
+  empresa: string;
+}
 
 export default function MinhasCandidaturas() {
   const { user } = useAuth();
-  const [apps, setApps] = useState<any[]>([]);
+  const [apps, setApps] = useState<AppData[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -17,7 +29,7 @@ export default function MinhasCandidaturas() {
         .eq('freelancer_id', user.id)
         .order('created_at', { ascending: false });
 
-      const enriched = await Promise.all(
+      const enriched: AppData[] = await Promise.all(
         (data ?? []).map(async (app) => {
           const { data: job } = await supabase.from('jobs').select('funcao, data_evento, valor, company_id').eq('id', app.job_id).single();
           let empresa = 'Empresa';
@@ -44,28 +56,33 @@ export default function MinhasCandidaturas() {
       <h1 className="text-display">Minhas Candidaturas</h1>
 
       {/* Mobile cards */}
-      <div className="md:hidden space-y-3">
+      <StaggerContainer className="md:hidden space-y-3">
         {apps.map((app) => (
-          <div key={app.id} className="border rounded-lg p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="font-semibold">{app.funcao}</p>
-                <p className="text-[13px] text-muted-foreground">{app.empresa}</p>
+          <StaggerItem key={app.id}>
+            <div className="border rounded-lg p-4 card-hover">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="font-semibold">{app.funcao}</p>
+                  <p className="text-[13px] text-muted-foreground">{app.empresa}</p>
+                </div>
+                <Badge variant={statusVariant(app.status)}>
+                  {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                </Badge>
               </div>
-              <Badge variant={statusVariant(app.status)}>
-                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-              </Badge>
+              <div className="flex items-center justify-between text-[13px] text-muted-foreground">
+                <span>{app.data_evento && new Date(app.data_evento).toLocaleDateString('pt-BR')}</span>
+                <span className="font-medium text-foreground">R$ {Number(app.valor ?? 0).toFixed(2)}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between text-[13px] text-muted-foreground">
-              <span>{app.data_evento && new Date(app.data_evento).toLocaleDateString('pt-BR')}</span>
-              <span className="font-medium text-foreground">R$ {Number(app.valor ?? 0).toFixed(2)}</span>
-            </div>
-          </div>
+          </StaggerItem>
         ))}
         {apps.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">Nenhuma candidatura encontrada.</p>
+          <div className="flex flex-col items-center py-12 text-muted-foreground">
+            <FloatingIcon><FileText className="h-10 w-10 mb-3" /></FloatingIcon>
+            <p className="text-sm">Nenhuma candidatura encontrada.</p>
+          </div>
         )}
-      </div>
+      </StaggerContainer>
 
       {/* Desktop table */}
       <div className="hidden md:block border rounded-lg overflow-hidden">
@@ -81,7 +98,7 @@ export default function MinhasCandidaturas() {
           </TableHeader>
           <TableBody>
             {apps.map((app) => (
-              <TableRow key={app.id}>
+              <TableRow key={app.id} className="transition-colors duration-150">
                 <TableCell className="font-medium">{app.funcao}</TableCell>
                 <TableCell>{app.empresa}</TableCell>
                 <TableCell>{app.data_evento && new Date(app.data_evento).toLocaleDateString('pt-BR')}</TableCell>

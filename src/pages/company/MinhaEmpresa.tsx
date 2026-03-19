@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AvatarUpload } from '@/components/AvatarUpload';
 import { useToast } from '@/hooks/use-toast';
 
 export default function MinhaEmpresa() {
@@ -47,8 +48,9 @@ export default function MinhaEmpresa() {
         .eq('user_id', user.id);
       if (error) throw error;
       toast({ title: 'Perfil atualizado!' });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -63,6 +65,18 @@ export default function MinhaEmpresa() {
       <h1 className="text-display mb-8">Minha Empresa</h1>
       <div className="border rounded-lg p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Avatar upload */}
+          {user && (
+            <div className="flex justify-center mb-2">
+              <AvatarUpload
+                userId={user.id}
+                type="company"
+                name={form.nome || 'E'}
+                size={80}
+              />
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-muted-foreground">Nome da empresa</Label>
             <Input value={form.nome} onChange={e => updateField('nome', e.target.value)} />
@@ -125,7 +139,7 @@ export default function MinhaEmpresa() {
             <Label className="text-[13px] font-medium text-muted-foreground">Descrição</Label>
             <Textarea className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background" value={form.descricao} onChange={e => updateField('descricao', e.target.value)} />
           </div>
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" className="w-full btn-press" disabled={submitting}>
             {submitting ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
         </form>

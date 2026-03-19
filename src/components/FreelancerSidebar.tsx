@@ -37,8 +37,8 @@ export function FreelancerSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === '/freelancer'}
-                      className="flex items-center gap-2.5 px-4 py-2.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground border-l-[3px] border-accent"
+                      className="flex items-center gap-2.5 px-4 py-2.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-150"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground border-l-[3px] border-accent transition-all duration-200"
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
                       {!collapsed && <span className="text-sm">{item.title}</span>}
@@ -52,7 +52,11 @@ export function FreelancerSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-4">
         <div className="h-px bg-sidebar-border mb-4" />
-        <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={signOut}>
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-150"
+          onClick={signOut}
+        >
           <LogOut className="mr-2.5 h-4 w-4" />
           {!collapsed && 'Sair'}
         </Button>
