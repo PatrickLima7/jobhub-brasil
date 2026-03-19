@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Search, ArrowLeft, Send, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
   id: string;
@@ -91,7 +92,6 @@ export default function ChatPage() {
 
   const handleSend = () => {
     if (!newMessage.trim()) return;
-    // Mock only - no actual send
     setNewMessage('');
   };
 
@@ -108,11 +108,11 @@ export default function ChatPage() {
           <button
             key={conv.id}
             onClick={() => setActiveConvId(conv.id)}
-            className={`w-full flex items-start gap-3 p-4 text-left transition-colors border-b hover:bg-secondary ${
+            className={`w-full flex items-start gap-3 p-4 text-left transition-colors duration-100 border-b hover:bg-secondary ${
               activeConvId === conv.id ? 'bg-secondary border-l-[3px] border-l-accent' : ''
             }`}
           >
-            <div className="w-10 h-10 rounded-lg bg-foreground text-background flex items-center justify-center text-sm font-semibold shrink-0">
+            <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-semibold shrink-0">
               {getInitials(conv.name)}
             </div>
             <div className="flex-1 min-w-0">
@@ -125,7 +125,7 @@ export default function ChatPage() {
                 <p className="text-[13px] text-muted-foreground truncate mt-0.5">{conv.lastMessage}</p>
               )}
             </div>
-            {conv.unread && <div className="w-2.5 h-2.5 rounded-full bg-accent shrink-0 mt-1.5" />}
+            {conv.unread && <div className="w-2.5 h-2.5 rounded-full bg-accent shrink-0 mt-1.5 unread-pulse" />}
           </button>
         ))}
       </div>
@@ -140,11 +140,11 @@ export default function ChatPage() {
         {/* Header */}
         <div className="flex items-center gap-3 p-4 border-b">
           {isMobile && (
-            <button onClick={() => setActiveConvId(null)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => setActiveConvId(null)} className="text-muted-foreground hover:text-foreground transition-colors duration-150">
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="w-10 h-10 rounded-lg bg-foreground text-background flex items-center justify-center text-sm font-semibold shrink-0">
+          <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-semibold shrink-0">
             {getInitials(activeConv.name)}
           </div>
           <div>
@@ -165,8 +165,14 @@ export default function ChatPage() {
             </div>
           ) : (
             <>
-              {activeConv.messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+              {activeConv.messages.map((msg, index) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15, ease: 'easeOut', delay: index * 0.03 }}
+                  className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+                >
                   <div
                     className={`max-w-[70%] px-4 py-2.5 text-sm ${
                       msg.sender === 'me'
@@ -179,7 +185,7 @@ export default function ChatPage() {
                       {msg.timestamp}
                     </p>
                   </div>
-                </div>
+                </motion.div>
               ))}
               <div ref={messagesEndRef} />
             </>
@@ -190,7 +196,7 @@ export default function ChatPage() {
         {!activeConv.locked && (
           <div className="border-t p-4 flex items-end gap-3">
             <textarea
-              className="flex-1 resize-none rounded-md border border-input bg-secondary px-3.5 py-2.5 text-sm focus-visible:outline-none focus-visible:border-foreground focus-visible:bg-background"
+              className="flex-1 resize-none rounded-md border border-input bg-secondary px-3.5 py-2.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:border-foreground focus-visible:bg-background"
               placeholder="Escreva uma mensagem..."
               rows={1}
               style={{ maxHeight: '96px' }}
@@ -206,7 +212,7 @@ export default function ChatPage() {
             <button
               onClick={handleSend}
               disabled={!newMessage.trim()}
-              className="h-10 w-10 rounded-md bg-foreground text-background flex items-center justify-center shrink-0 hover:bg-foreground/90 disabled:opacity-50"
+              className="h-10 w-10 rounded-md bg-foreground text-background flex items-center justify-center shrink-0 hover:bg-foreground/90 disabled:opacity-50 btn-press"
             >
               <Send className="h-4 w-4" />
             </button>
@@ -219,7 +225,31 @@ export default function ChatPage() {
   if (isMobile) {
     return (
       <div className="h-[calc(100dvh-128px)] flex flex-col -mx-4 -mt-4 md:mx-0 md:mt-0">
-        {!activeConvId ? renderConversationList() : renderChatView()}
+        <AnimatePresence mode="wait">
+          {!activeConvId ? (
+            <motion.div
+              key="list"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="h-full"
+            >
+              {renderConversationList()}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="h-full"
+            >
+              {renderChatView()}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }

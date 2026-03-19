@@ -10,7 +10,9 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import { AlertBanner } from '@/components/AlertBanner';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Search, Calendar, Clock, DollarSign, X, SlidersHorizontal, SearchX } from 'lucide-react';
+import { StaggerContainer, StaggerItem, FloatingIcon } from '@/components/PageTransition';
+import { SkeletonCard } from '@/components/SkeletonCard';
+import { Search, Calendar, Clock, X, SlidersHorizontal, SearchX } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -53,6 +55,7 @@ export default function VagasDisponiveis() {
   const { checkFreelancerProfile, checkSpamProtection } = useSystemAlerts();
 
   const [jobs, setJobs] = useState<JobWithStatus[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedFuncoes, setSelectedFuncoes] = useState<string[]>([]);
   const [cidade, setCidade] = useState('');
@@ -97,6 +100,7 @@ export default function VagasDisponiveis() {
         })
       );
       setJobs(enriched);
+      setLoading(false);
     };
     fetchData();
   }, [user]);
@@ -191,7 +195,7 @@ export default function VagasDisponiveis() {
               type="button"
               onClick={() => toggleFuncao(f)}
               className={cn(
-                'inline-flex items-center rounded-pill px-3 py-1.5 text-xs font-medium border transition-colors cursor-pointer',
+                'inline-flex items-center rounded-pill px-3 py-1.5 text-xs font-medium border transition-colors duration-150 cursor-pointer',
                 selectedFuncoes.includes(f)
                   ? 'bg-foreground text-background border-foreground'
                   : 'bg-background text-foreground border-border hover:bg-secondary'
@@ -206,15 +210,11 @@ export default function VagasDisponiveis() {
       <div className="space-y-1.5">
         <p className="text-[13px] font-medium text-muted-foreground">Cidade</p>
         <div className="relative">
-          <Input
-            placeholder="Ex: São Paulo"
-            value={cidade}
-            onChange={(e) => setCidade(e.target.value)}
-          />
+          <Input placeholder="Ex: São Paulo" value={cidade} onChange={(e) => setCidade(e.target.value)} />
           {cidade && (
             <button
               onClick={() => setCidade('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -265,7 +265,7 @@ export default function VagasDisponiveis() {
               type="button"
               onClick={() => setTipoPagamento(opt.value)}
               className={cn(
-                'inline-flex items-center rounded-pill px-3 py-1.5 text-xs font-medium border transition-colors cursor-pointer',
+                'inline-flex items-center rounded-pill px-3 py-1.5 text-xs font-medium border transition-colors duration-150 cursor-pointer',
                 tipoPagamento === opt.value
                   ? 'bg-foreground text-background border-foreground'
                   : 'bg-background text-foreground border-border hover:bg-secondary'
@@ -286,7 +286,7 @@ export default function VagasDisponiveis() {
               type="button"
               onClick={() => setSortBy(opt.value)}
               className={cn(
-                'inline-flex items-center rounded-pill px-3 py-1.5 text-xs font-medium border transition-colors cursor-pointer',
+                'inline-flex items-center rounded-pill px-3 py-1.5 text-xs font-medium border transition-colors duration-150 cursor-pointer',
                 sortBy === opt.value
                   ? 'bg-foreground text-background border-foreground'
                   : 'bg-background text-foreground border-border hover:bg-secondary'
@@ -299,6 +299,17 @@ export default function VagasDisponiveis() {
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-display">Vagas Disponíveis</h1>
+        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -315,7 +326,7 @@ export default function VagasDisponiveis() {
           <Input className="pl-10" placeholder="Buscar por função ou empresa..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {isMobile && (
-          <Button variant="outline" onClick={() => setFilterDrawerOpen(true)} className="shrink-0">
+          <Button variant="outline" onClick={() => setFilterDrawerOpen(true)} className="shrink-0 btn-press">
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
         )}
@@ -332,7 +343,7 @@ export default function VagasDisponiveis() {
           </DrawerHeader>
           <div className="px-4 pb-6 overflow-auto">{renderFilters()}</div>
           <div className="px-4 pb-6">
-            <Button className="w-full" onClick={() => setFilterDrawerOpen(false)}>
+            <Button className="w-full btn-press" onClick={() => setFilterDrawerOpen(false)}>
               Aplicar
             </Button>
           </div>
@@ -345,66 +356,68 @@ export default function VagasDisponiveis() {
           {filtered.length} vaga{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
         </p>
         {hasActiveFilters && (
-          <button onClick={clearFilters} className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2">
+          <button onClick={clearFilters} className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors duration-150">
             Limpar filtros
           </button>
         )}
       </div>
 
       {/* Job cards grid */}
-      <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <StaggerContainer className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((job) => (
-          <div
-            key={job.id}
-            className={cn(
-              'border rounded-lg p-4 md:p-6 hover:bg-secondary transition-colors cursor-pointer relative',
-              getCardBorderClass(job.applicationStatus)
-            )}
-            onClick={() => {
-              setSelectedJob(job);
-              setDialogOpen(true);
-            }}
-          >
-            {/* Application status badge */}
-            {job.applicationStatus === 'aguardando' && (
-              <Badge variant="ativa" className="absolute top-3 right-3 text-[11px]">Candidatura enviada</Badge>
-            )}
-            {job.applicationStatus === 'contratado' && (
-              <Badge variant="contratado" className="absolute top-3 right-3 text-[11px]">Contratado ✓</Badge>
-            )}
-            {job.applicationStatus === 'recusado' && (
-              <Badge variant="encerrada" className="absolute top-3 right-3 text-[11px]">Não selecionado</Badge>
-            )}
+          <StaggerItem key={job.id}>
+            <div
+              className={cn(
+                'border rounded-lg p-4 md:p-6 hover:bg-secondary transition-colors duration-150 cursor-pointer relative card-hover',
+                getCardBorderClass(job.applicationStatus)
+              )}
+              onClick={() => {
+                setSelectedJob(job);
+                setDialogOpen(true);
+              }}
+            >
+              {/* Application status badge */}
+              {job.applicationStatus === 'aguardando' && (
+                <Badge variant="ativa" className="absolute top-3 right-3 text-[11px]">Candidatura enviada</Badge>
+              )}
+              {job.applicationStatus === 'contratado' && (
+                <Badge variant="contratado" className="absolute top-3 right-3 text-[11px]">Contratado ✓</Badge>
+              )}
+              {job.applicationStatus === 'recusado' && (
+                <Badge variant="encerrada" className="absolute top-3 right-3 text-[11px]">Não selecionado</Badge>
+              )}
 
-            <div className="flex items-start justify-between mb-3 pr-24">
-              <div>
-                <h3 className="font-semibold">{job.funcao}</h3>
-                <p className="text-[13px] text-muted-foreground">{job.empresa_nome}</p>
+              <div className="flex items-start justify-between mb-3 pr-24">
+                <div>
+                  <h3 className="font-semibold">{job.funcao}</h3>
+                  <p className="text-[13px] text-muted-foreground">{job.empresa_nome}</p>
+                </div>
+              </div>
+              <div className="space-y-1.5 text-[13px] text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 shrink-0" />
+                  {new Date(job.data_evento).toLocaleDateString('pt-BR')}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  {job.horario_inicio} — {job.horario_fim}
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-3">
+                <p className="font-semibold text-lg">R$ {Number(job.valor).toFixed(2)}</p>
+                <Badge variant="secondary" className="text-xs">{tipoPagLabel[job.tipo_pagamento] ?? job.tipo_pagamento}</Badge>
               </div>
             </div>
-            <div className="space-y-1.5 text-[13px] text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3.5 w-3.5 shrink-0" />
-                {new Date(job.data_evento).toLocaleDateString('pt-BR')}
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                {job.horario_inicio} — {job.horario_fim}
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-3">
-              <p className="font-semibold text-lg">R$ {Number(job.valor).toFixed(2)}</p>
-              <Badge variant="secondary" className="text-xs">{tipoPagLabel[job.tipo_pagamento] ?? job.tipo_pagamento}</Badge>
-            </div>
-          </div>
+          </StaggerItem>
         ))}
         {filtered.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <SearchX className="h-10 w-10 mb-3" />
-            <p className="text-sm">Nenhuma vaga encontrada para esses filtros</p>
+            <FloatingIcon><SearchX className="h-10 w-10 mb-3" /></FloatingIcon>
+            <p className="text-sm">Nenhuma vaga encontrada no momento.</p>
+            <p className="text-[13px]">Ajuste os filtros ou volte mais tarde.</p>
           </div>
         )}
-      </div>
+      </StaggerContainer>
 
       {/* Job detail dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -456,7 +469,7 @@ export default function VagasDisponiveis() {
                 </Button>
               )}
               {selectedJob.applicationStatus === 'contratado' && (
-                <Button variant="outline" className="w-full" onClick={() => setDialogOpen(false)}>
+                <Button variant="outline" className="w-full btn-press" onClick={() => setDialogOpen(false)}>
                   Ver detalhes
                 </Button>
               )}
@@ -466,7 +479,7 @@ export default function VagasDisponiveis() {
                 </Button>
               )}
               {!selectedJob.applicationStatus && (
-                <Button className="w-full" onClick={() => handleCandidatar(selectedJob.id)}>
+                <Button className="w-full btn-press" onClick={() => handleCandidatar(selectedJob.id)}>
                   Candidatar-se
                 </Button>
               )}

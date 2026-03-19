@@ -1,4 +1,6 @@
 import { Star } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 interface StarRatingProps {
   rating: number;
@@ -19,6 +21,8 @@ export function StarRating({
   interactive = false,
   onRate,
 }: StarRatingProps) {
+  const [hoveredStar, setHoveredStar] = useState(0);
+
   const handleClick = (star: number) => {
     if (interactive && onRate) {
       onRate(star);
@@ -30,15 +34,22 @@ export function StarRating({
       <div className="flex gap-0.5">
         {Array.from({ length: maxStars }, (_, i) => {
           const starIndex = i + 1;
-          const fillPercentage = Math.min(1, Math.max(0, rating - i)) * 100;
+          const displayRating = interactive && hoveredStar > 0 ? hoveredStar : rating;
+          const fillPercentage = Math.min(1, Math.max(0, displayRating - i)) * 100;
+          const isActive = interactive && starIndex <= (hoveredStar || rating);
 
           return (
-            <button
+            <motion.button
               key={i}
               type="button"
               disabled={!interactive}
               onClick={() => handleClick(starIndex)}
-              className={`relative ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'} disabled:opacity-100`}
+              onMouseEnter={() => interactive && setHoveredStar(starIndex)}
+              onMouseLeave={() => interactive && setHoveredStar(0)}
+              whileTap={interactive ? { scale: 1.3 } : undefined}
+              animate={isActive && interactive ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+              transition={{ duration: 0.2, ease: 'easeOut', delay: interactive ? i * 0.03 : 0 }}
+              className={`relative ${interactive ? 'cursor-pointer' : 'cursor-default'} disabled:opacity-100`}
               style={{ width: size, height: size }}
             >
               {/* Empty star background */}
@@ -55,12 +66,12 @@ export function StarRating({
                 >
                   <Star
                     size={size}
-                    className="text-accent fill-accent"
+                    className="text-accent fill-accent transition-colors duration-150"
                     strokeWidth={0}
                   />
                 </div>
               )}
-            </button>
+            </motion.button>
           );
         })}
       </div>
