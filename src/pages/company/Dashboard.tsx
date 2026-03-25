@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase, Users, CheckCircle, XCircle } from 'lucide-react';
+import { Briefcase, Users, CheckCircle, XCircle, Wallet } from 'lucide-react';
 import { StaggerContainer, StaggerItem } from '@/components/PageTransition';
 
 export default function CompanyDashboard() {
@@ -68,6 +68,7 @@ export default function CompanyDashboard() {
   return (
     <div className="space-y-8">
       <h1 className="text-display">Dashboard</h1>
+
       <StaggerContainer className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <StaggerItem key={c.title}>
@@ -78,6 +79,18 @@ export default function CompanyDashboard() {
           </StaggerItem>
         ))}
       </StaggerContainer>
+
+      {/* Saldo card */}
+      <StaggerItem>
+        <div className="border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Wallet className="h-5 w-5 text-accent" />
+            <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider">Saldo disponível</p>
+          </div>
+          <p className="text-[32px] font-bold leading-none">R$ 0,00</p>
+          <p className="text-[12px] text-muted-foreground mt-2">Disponível para próximas contratações</p>
+        </div>
+      </StaggerItem>
 
       <div className="border rounded-lg">
         <div className="p-6 pb-4">

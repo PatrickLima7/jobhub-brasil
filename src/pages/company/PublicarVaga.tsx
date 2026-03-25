@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertBanner } from '@/components/AlertBanner';
@@ -27,10 +27,16 @@ export default function PublicarVaga() {
   const [horarioInicio, setHorarioInicio] = useState('');
   const [horarioFim, setHorarioFim] = useState('');
   const [valor, setValor] = useState('');
-  const [tipoPagamento, setTipoPagamento] = useState('diaria');
+  const [incluirVT, setIncluirVT] = useState(false);
+  const [valorVT, setValorVT] = useState('');
   const [numVagas, setNumVagas] = useState('1');
   const [requisitos, setRequisitos] = useState('');
   const [profileAlert, setProfileAlert] = useState('');
+
+  const valorNum = parseFloat(valor) || 0;
+  const vtNum = incluirVT ? (parseFloat(valorVT) || 0) : 0;
+  const total = valorNum + vtNum;
+  const taxa = total * 0.22;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,15 +58,15 @@ export default function PublicarVaga() {
         data_evento: format(dataEvento, 'yyyy-MM-dd'),
         horario_inicio: horarioInicio,
         horario_fim: horarioFim,
-        valor: parseFloat(valor) || 0,
-        tipo_pagamento: tipoPagamento,
+        valor: valorNum,
+        vale_transporte: vtNum,
         num_vagas: parseInt(numVagas) || 1,
         requisitos: requisitos || null,
       });
       if (error) throw error;
       toast({ title: 'Vaga publicada com sucesso!' });
       setFuncao(''); setDescricao(''); setDataEvento(undefined); setHorarioInicio('');
-      setHorarioFim(''); setValor(''); setNumVagas('1'); setRequisitos('');
+      setHorarioFim(''); setValor(''); setIncluirVT(false); setValorVT(''); setNumVagas('1'); setRequisitos('');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       toast({ title: 'Erro', description: message, variant: 'destructive' });
@@ -118,22 +124,70 @@ export default function PublicarVaga() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Valor ofertado (R$)</Label>
-            <Input type="number" step="0.01" min="0" placeholder="150.00" value={valor} onChange={e => setValor(e.target.value)} required />
+            <Label className="text-[13px] font-medium text-muted-foreground">Valor fixo da vaga</Label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                className="pl-10"
+                placeholder="0,00"
+                value={valor}
+                onChange={e => setValor(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Tipo de pagamento</Label>
-            <RadioGroup value={tipoPagamento} onValueChange={setTipoPagamento}>
-              <div className="flex gap-4">
-                {[['diaria', 'Diária'], ['hora', 'Por hora'], ['combinar', 'A combinar']].map(([v, l]) => (
-                  <div key={v} className="flex items-center space-x-2">
-                    <RadioGroupItem value={v} id={v} />
-                    <Label htmlFor={v} className="text-sm">{l}</Label>
-                  </div>
-                ))}
+          {/* Vale transporte toggle */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-[13px] font-medium text-muted-foreground">Incluir vale transporte?</Label>
+              <Switch checked={incluirVT} onCheckedChange={setIncluirVT} />
+            </div>
+
+            {incluirVT && (
+              <div className="space-y-1.5">
+                <Label className="text-[13px] font-medium text-muted-foreground">Valor do vale transporte</Label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    className="pl-10"
+                    placeholder="0,00"
+                    value={valorVT}
+                    onChange={e => setValorVT(e.target.value)}
+                  />
+                </div>
               </div>
-            </RadioGroup>
+            )}
+
+            {incluirVT && (valorNum > 0 || vtNum > 0) && (
+              <div className="bg-secondary border rounded-lg p-4 space-y-1.5 text-[13px]">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Valor da vaga:</span>
+                  <span>R$ {valorNum.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Vale transporte:</span>
+                  <span>R$ {vtNum.toFixed(2)}</span>
+                </div>
+                <div className="border-t border-border my-1.5" />
+                <div className="flex justify-between font-semibold text-foreground">
+                  <span>Total da contratação:</span>
+                  <span>R$ {total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-accent">
+                  <span>Taxa TôLivre (22%):</span>
+                  <span>R$ {taxa.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
