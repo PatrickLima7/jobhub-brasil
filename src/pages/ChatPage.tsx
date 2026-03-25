@@ -57,7 +57,7 @@ const MOCK_CONVERSATIONS: Conversation[] = [
   {
     id: '3',
     name: 'Pedro R.',
-    jobTitle: 'Cozinheiro — Brunch 28/03',
+    jobTitle: 'Auxiliar de Cozinha — Brunch 28/03',
     lastMessage: '',
     timestamp: '',
     unread: false,

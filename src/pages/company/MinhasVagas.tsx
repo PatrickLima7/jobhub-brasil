@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StarRating } from '@/components/StarRating';
 import { UserAvatar } from '@/components/AvatarUpload';
@@ -13,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StaggerContainer, StaggerItem, FloatingIcon } from '@/components/PageTransition';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import { ChevronDown, ChevronUp, X, MapPin, Briefcase, SearchX } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, MapPin, Briefcase, SearchX, User, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CandidateData {
@@ -25,6 +26,7 @@ interface CandidateData {
   freelancer_cidade: string;
   freelancer_experiencia: number;
   freelancer_disponibilidade: string[];
+  freelancer_data_nascimento: string | null;
   avgRating: number;
   reviewCount: number;
 }
@@ -40,6 +42,33 @@ interface JobData {
   noCandidateAlert: boolean;
 }
 
+function calcAge(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const birth = new Date(dateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function parseDisponibilidade(disp: string[]): string {
+  if (!disp || disp.length === 0) return '';
+  try {
+    const grid = JSON.parse(disp[0]) as Record<string, string[]>;
+    const labels: Record<string, string> = { seg: 'Seg', ter: 'Ter', qua: 'Qua', qui: 'Qui', sex: 'Sex', sab: 'Sáb', dom: 'Dom' };
+    const parts: string[] = [];
+    Object.entries(grid).forEach(([dia, periodos]) => {
+      periodos.forEach(p => {
+        parts.push(`${labels[dia] ?? dia} ${p === 'diurno' ? 'Diurno' : 'Noturno'}`);
+      });
+    });
+    return parts.join(' · ');
+  } catch {
+    return disp.join(', ');
+  }
+}
+
 export default function MinhasVagas() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -52,6 +81,7 @@ export default function MinhasVagas() {
   const [candidateSort, setCandidateSort] = useState<'rating' | 'recent'>('rating');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [selectedJobFuncao, setSelectedJobFuncao] = useState('');
+  const [cancelJobId, setCancelJobId] = useState<string | null>(null);
 
   const fetchJobs = async () => {
     if (!user) return;
@@ -75,6 +105,13 @@ export default function MinhasVagas() {
 
   const filteredJobs = filter === 'todas' ? jobs : jobs.filter((j) => j.status === filter);
 
+  const handleCancelar = async (jobId: string) => {
+    await supabase.from('jobs').update({ status: 'cancelada' }).eq('id', jobId);
+    toast({ title: 'Vaga cancelada. Saldo adicionado à sua conta.' });
+    setCancelJobId(null);
+    fetchJobs();
+  };
+
   const handleEncerrar = async (jobId: string) => {
     await supabase.from('jobs').update({ status: 'encerrada' }).eq('id', jobId);
     toast({ title: 'Vaga encerrada' });
@@ -88,7 +125,7 @@ export default function MinhasVagas() {
       apps.map(async (app) => {
         const { data: profile } = await supabase
           .from('freelancer_profiles')
-          .select('nome, funcoes, cidade, experiencia, disponibilidade')
+          .select('nome, funcoes, cidade, experiencia, disponibilidade, data_nascimento')
           .eq('user_id', app.freelancer_id)
           .maybeSingle();
 
@@ -109,6 +146,7 @@ export default function MinhasVagas() {
           freelancer_cidade: profile?.cidade ?? '',
           freelancer_experiencia: profile?.experiencia ?? 0,
           freelancer_disponibilidade: profile?.disponibilidade ?? [],
+          freelancer_data_nascimento: (profile as Record<string, unknown>)?.data_nascimento as string | null ?? null,
           avgRating,
           reviewCount: ratings.length,
         };
@@ -157,63 +195,77 @@ export default function MinhasVagas() {
     return name;
   };
 
-  const renderCandidateCard = (c: CandidateData, index: number) => (
-    <motion.div
-      key={c.id}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: 'easeOut', delay: index * 0.04 }}
-      className="border rounded-lg p-4 space-y-3"
-    >
-      <div className="flex items-start gap-3">
-        <UserAvatar type="freelancer" userId={c.freelancer_id} name={c.freelancer_nome} size={48} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-medium text-sm">{maskName(c.freelancer_nome)}</p>
-            {c.avgRating >= 4.5 && <Badge variant="contratado" className="text-[11px]">Recomendado</Badge>}
-            {c.avgRating > 0 && c.avgRating < 3.0 && <Badge variant="recusado" className="text-[11px]">Baixa avaliação</Badge>}
-          </div>
-          {c.avgRating > 0 && (
-            <StarRating rating={c.avgRating} reviewCount={c.reviewCount} size={14} />
-          )}
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {c.freelancer_funcoes.slice(0, 3).map((f) => (
-              <Badge key={f} variant="secondary" className="text-[11px]">{f}</Badge>
-            ))}
-          </div>
-          <div className="flex items-center gap-3 mt-2 text-[13px] text-muted-foreground">
-            {c.freelancer_cidade && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {c.freelancer_cidade}
-              </span>
+  const renderCandidateCard = (c: CandidateData, index: number) => {
+    const age = calcAge(c.freelancer_data_nascimento);
+    const dispText = parseDisponibilidade(c.freelancer_disponibilidade);
+
+    return (
+      <motion.div
+        key={c.id}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut', delay: index * 0.04 }}
+        className="border rounded-lg p-4 space-y-3"
+      >
+        <div className="flex items-start gap-3">
+          <UserAvatar type="freelancer" userId={c.freelancer_id} name={c.freelancer_nome} size={48} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium text-sm">{maskName(c.freelancer_nome)}</p>
+              {c.avgRating >= 4.5 && <Badge variant="contratado" className="text-[11px]">Recomendado</Badge>}
+              {c.avgRating > 0 && c.avgRating < 3.0 && <Badge variant="recusado" className="text-[11px]">Baixa avaliação</Badge>}
+            </div>
+            {c.avgRating > 0 && (
+              <StarRating rating={c.avgRating} reviewCount={c.reviewCount} size={14} />
             )}
-            <span className="flex items-center gap-1">
-              <Briefcase className="h-3 w-3" />
-              {c.freelancer_experiencia} ano{c.freelancer_experiencia !== 1 ? 's' : ''}
-            </span>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {c.freelancer_funcoes.slice(0, 3).map((f) => (
+                <Badge key={f} variant="secondary" className="text-[11px]">{f}</Badge>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 mt-2 text-[13px] text-muted-foreground flex-wrap">
+              {age !== null && (
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {age} anos
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Briefcase className="h-3 w-3" />
+                {c.freelancer_experiencia} ano{c.freelancer_experiencia !== 1 ? 's' : ''} exp.
+              </span>
+              {c.freelancer_cidade && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {c.freelancer_cidade}
+                </span>
+              )}
+            </div>
+            {dispText && (
+              <p className="text-[12px] text-muted-foreground mt-1.5 truncate">{dispText}</p>
+            )}
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {c.status === 'aguardando' && (
-          <>
-            <Button size="sm" className="flex-1 btn-press" onClick={() => handleContratar(c.id)}>
-              Contratar
-            </Button>
-            <button
-              onClick={() => handleRejeitar(c.id)}
-              className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors duration-150"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </>
-        )}
-        {c.status === 'contratado' && <Badge variant="contratado">Contratado</Badge>}
-        {c.status === 'recusado' && <Badge variant="recusado">Recusado</Badge>}
-      </div>
-    </motion.div>
-  );
+        <div className="flex items-center gap-2">
+          {c.status === 'aguardando' && (
+            <>
+              <Button size="sm" className="flex-1 btn-press" onClick={() => handleContratar(c.id)}>
+                Contratar
+              </Button>
+              <button
+                onClick={() => handleRejeitar(c.id)}
+                className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors duration-150"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </>
+          )}
+          {c.status === 'contratado' && <Badge variant="contratado">Contratado</Badge>}
+          {c.status === 'recusado' && <Badge variant="recusado">Recusado</Badge>}
+        </div>
+      </motion.div>
+    );
+  };
 
   const renderCandidateList = () => (
     <div className="space-y-3">
@@ -273,6 +325,7 @@ export default function MinhasVagas() {
             <SelectItem value="todas">Todas</SelectItem>
             <SelectItem value="ativa">Ativas</SelectItem>
             <SelectItem value="encerrada">Encerradas</SelectItem>
+            <SelectItem value="cancelada">Canceladas</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -288,8 +341,8 @@ export default function MinhasVagas() {
                   <p className="text-[13px] text-muted-foreground">{new Date(job.data_evento).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <Badge variant={job.status === 'ativa' ? 'ativa' : 'encerrada'}>
-                    {job.status === 'ativa' ? 'Ativa' : 'Encerrada'}
+                  <Badge variant={job.status === 'ativa' ? 'ativa' : job.status === 'cancelada' ? 'recusado' : 'encerrada'}>
+                    {job.status === 'ativa' ? 'Ativa' : job.status === 'cancelada' ? 'Cancelada' : 'Encerrada'}
                   </Badge>
                   {job.noCandidateAlert && (
                     <Badge variant="ativa" className="text-[11px]">Sem candidatos</Badge>
@@ -305,8 +358,8 @@ export default function MinhasVagas() {
                   Ver Candidatos ({job.candidaturas})
                 </Button>
                 {job.status === 'ativa' && (
-                  <Button size="sm" variant="destructive" className="btn-press" onClick={() => handleEncerrar(job.id)}>
-                    Encerrar
+                  <Button size="sm" variant="destructive" className="btn-press" onClick={() => setCancelJobId(job.id)}>
+                    Cancelar
                   </Button>
                 )}
               </div>
@@ -356,8 +409,8 @@ export default function MinhasVagas() {
                     <TableCell>R$ {Number(job.valor).toFixed(2)}</TableCell>
                     <TableCell>{job.candidaturas}</TableCell>
                     <TableCell>
-                      <Badge variant={job.status === 'ativa' ? 'ativa' : 'encerrada'}>
-                        {job.status === 'ativa' ? 'Ativa' : 'Encerrada'}
+                      <Badge variant={job.status === 'ativa' ? 'ativa' : job.status === 'cancelada' ? 'recusado' : 'encerrada'}>
+                        {job.status === 'ativa' ? 'Ativa' : job.status === 'cancelada' ? 'Cancelada' : 'Encerrada'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -372,8 +425,8 @@ export default function MinhasVagas() {
                           {expandedJobId === job.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                         </Button>
                         {job.status === 'ativa' && (
-                          <Button size="sm" variant="destructive" className="btn-press" onClick={() => handleEncerrar(job.id)}>
-                            Encerrar
+                          <Button size="sm" variant="destructive" className="btn-press" onClick={() => setCancelJobId(job.id)}>
+                            Cancelar
                           </Button>
                         )}
                       </div>
@@ -429,6 +482,32 @@ export default function MinhasVagas() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Cancel job confirmation */}
+      <Dialog open={cancelJobId !== null} onOpenChange={(open) => !open && setCancelJobId(null)}>
+        <DialogContent className="max-w-sm border">
+          <DialogHeader>
+            <DialogTitle>Cancelar vaga?</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground pt-2">
+              O valor pago não será estornado. Será convertido em saldo na plataforma para uso em futuras contratações.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center py-4">
+            <Wallet className="h-10 w-10 text-accent" />
+          </div>
+          <div className="space-y-2">
+            <Button variant="outline" className="w-full btn-press" onClick={() => setCancelJobId(null)}>
+              Voltar
+            </Button>
+            <Button
+              className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 btn-press"
+              onClick={() => cancelJobId && handleCancelar(cancelJobId)}
+            >
+              Confirmar cancelamento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -109,6 +109,7 @@ export type Database = {
           cidade: string | null
           cpf: string | null
           created_at: string
+          data_nascimento: string | null
           disponibilidade: string[] | null
           estado: string | null
           experiencia: number | null
@@ -124,6 +125,7 @@ export type Database = {
           cidade?: string | null
           cpf?: string | null
           created_at?: string
+          data_nascimento?: string | null
           disponibilidade?: string[] | null
           estado?: string | null
           experiencia?: number | null
@@ -139,6 +141,7 @@ export type Database = {
           cidade?: string | null
           cpf?: string | null
           created_at?: string
+          data_nascimento?: string | null
           disponibilidade?: string[] | null
           estado?: string | null
           experiencia?: number | null
@@ -165,6 +168,7 @@ export type Database = {
           requisitos: string | null
           status: string
           tipo_pagamento: string
+          vale_transporte: number | null
           valor: number
         }
         Insert: {
@@ -180,6 +184,7 @@ export type Database = {
           requisitos?: string | null
           status?: string
           tipo_pagamento?: string
+          vale_transporte?: number | null
           valor?: number
         }
         Update: {
@@ -195,6 +200,7 @@ export type Database = {
           requisitos?: string | null
           status?: string
           tipo_pagamento?: string
+          vale_transporte?: number | null
           valor?: number
         }
         Relationships: []

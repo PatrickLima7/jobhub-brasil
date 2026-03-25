@@ -4,8 +4,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, User } from 'lucide-react';
+
+const TERMOS_CONTENT = `O TôLivre é uma plataforma de conexão entre estabelecimentos do setor de food service e profissionais freelancer. Ao se cadastrar, você concorda em utilizar a plataforma de forma ética e responsável.
+
+[Conteúdo completo será inserido pela equipe jurídica do TôLivre]`;
+
+const PRIVACIDADE_CONTENT = `Em conformidade com a LGPD (Lei 13.709/2018), o TôLivre coleta apenas os dados necessários para o funcionamento da plataforma. Seus dados não são vendidos a terceiros.
+
+[Conteúdo completo será inserido pela equipe jurídica do TôLivre]`;
 
 export default function Auth() {
   const { user, role, loading } = useAuth();
@@ -15,6 +25,8 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModal, setTermsModal] = useState<'termos' | 'privacidade' | null>(null);
   const { signIn, signUp } = useAuth();
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Carregando...</p></div>;
@@ -22,6 +34,7 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLogin && !termsAccepted) return;
     setSubmitting(true);
     try {
       if (isLogin) {
@@ -37,6 +50,8 @@ export default function Auth() {
       setSubmitting(false);
     }
   };
+
+  const canSubmit = isLogin || termsAccepted;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -92,7 +107,42 @@ export default function Auth() {
               <Input id="password" type="password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
 
-            <Button type="submit" className="w-full" disabled={submitting}>
+            {!isLogin && (
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="terms" className="text-[13px] text-muted-foreground leading-relaxed cursor-pointer">
+                  Li e aceito os{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setTermsModal('termos'); }}
+                    className="text-accent underline underline-offset-2 hover:no-underline font-medium"
+                  >
+                    Termos de Uso
+                  </button>
+                  {' '}e a{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setTermsModal('privacidade'); }}
+                    className="text-accent underline underline-offset-2 hover:no-underline font-medium"
+                  >
+                    Política de Privacidade
+                  </button>
+                  {' '}do TôLivre
+                </label>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={submitting || !canSubmit}
+              style={!canSubmit ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+            >
               {submitting ? 'Aguarde...' : isLogin ? 'Entrar' : 'Cadastrar'}
             </Button>
           </form>
@@ -100,7 +150,7 @@ export default function Auth() {
           <div className="mt-5 text-center text-sm text-muted-foreground">
             {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => { setIsLogin(!isLogin); setTermsAccepted(false); }}
               className="text-foreground font-medium underline underline-offset-4 hover:no-underline"
             >
               {isLogin ? 'Cadastre-se' : 'Fazer login'}
@@ -108,6 +158,29 @@ export default function Auth() {
           </div>
         </div>
       </div>
+
+      {/* Terms / Privacy Modal */}
+      <Dialog open={termsModal !== null} onOpenChange={(open) => !open && setTermsModal(null)}>
+        <DialogContent className="max-w-lg border">
+          <DialogHeader>
+            <DialogTitle>
+              {termsModal === 'termos' ? 'Termos de Uso' : 'Política de Privacidade'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+            {termsModal === 'termos' ? TERMOS_CONTENT : PRIVACIDADE_CONTENT}
+          </div>
+          <Button
+            className="w-full btn-press"
+            onClick={() => {
+              setTermsAccepted(true);
+              setTermsModal(null);
+            }}
+          >
+            Li e entendi
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
