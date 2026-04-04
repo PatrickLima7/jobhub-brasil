@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CompanyLayout from "@/layouts/CompanyLayout";
 import FreelancerLayout from "@/layouts/FreelancerLayout";
+import AdminLayout from "@/layouts/AdminLayout";
 import Auth from "@/pages/Auth";
 import CompanyDashboard from "@/pages/company/Dashboard";
 import PublicarVaga from "@/pages/company/PublicarVaga";
@@ -17,6 +18,12 @@ import VagasDisponiveis from "@/pages/freelancer/VagasDisponiveis";
 import MinhasCandidaturas from "@/pages/freelancer/MinhasCandidaturas";
 import MeuPerfil from "@/pages/freelancer/MeuPerfil";
 import ChatPage from "@/pages/ChatPage";
+import AdminDashboard from "@/pages/admin/Dashboard";
+import AdminEmpresas from "@/pages/admin/Empresas";
+import AdminFreelancers from "@/pages/admin/Freelancers";
+import AdminVagas from "@/pages/admin/Vagas";
+import AdminFinanceiro from "@/pages/admin/Financeiro";
+import AdminRelatorios from "@/pages/admin/Relatorios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +53,15 @@ const App = () => (
               <Route path="candidaturas" element={<MinhasCandidaturas />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="perfil" element={<MeuPerfil />} />
+            </Route>
+
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="empresas" element={<AdminEmpresas />} />
+              <Route path="freelancers" element={<AdminFreelancers />} />
+              <Route path="vagas" element={<AdminVagas />} />
+              <Route path="financeiro" element={<AdminFinanceiro />} />
+              <Route path="relatorios" element={<AdminRelatorios />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
