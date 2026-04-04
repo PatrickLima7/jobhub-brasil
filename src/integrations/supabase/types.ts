@@ -205,6 +205,41 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          application_id: string
+          content: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          application_id: string
+          content: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          application_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           application_id: string
@@ -246,6 +281,71 @@ export type Database = {
           },
         ]
       }
+      terms_acceptance: {
+        Row: {
+          accepted_at: string
+          accepted_ip: string | null
+          id: string
+          terms_version: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          accepted_ip?: string | null
+          id?: string
+          terms_version?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          accepted_ip?: string | null
+          id?: string
+          terms_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          application_id: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          application_id?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          application_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -267,6 +367,27 @@ export type Database = {
         }
         Relationships: []
       }
+      wallets: {
+        Row: {
+          balance: number
+          company_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          company_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          company_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -278,7 +399,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "company" | "freelancer"
+      app_role: "company" | "freelancer" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -406,7 +527,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["company", "freelancer"],
+      app_role: ["company", "freelancer", "admin"],
     },
   },
 } as const
