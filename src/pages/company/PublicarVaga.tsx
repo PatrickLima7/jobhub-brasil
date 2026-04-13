@@ -66,7 +66,7 @@ export default function PublicarVaga() {
       if (error) throw error;
       toast({ title: 'Vaga publicada com sucesso!' });
       setFuncao(''); setDescricao(''); setDataEvento(undefined); setHorarioInicio('');
-      setHorarioFim(''); setValor(''); setIncluirVT(false); setValorVT(''); setNumVagas('1'); setRequisitos('');
+      setHorarioFim(''); setIncluirVT(false); setValorVT(''); setNumVagas('1'); setRequisitos('');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       toast({ title: 'Erro', description: message, variant: 'destructive' });
