@@ -26,7 +26,7 @@ export default function PublicarVaga() {
   const [dataEvento, setDataEvento] = useState<Date>();
   const [horarioInicio, setHorarioInicio] = useState('');
   const [horarioFim, setHorarioFim] = useState('');
-  const [valor, setValor] = useState('');
+  const [valor] = useState('180');
   const [incluirVT, setIncluirVT] = useState(false);
   const [valorVT, setValorVT] = useState('');
   const [numVagas, setNumVagas] = useState('1');
@@ -129,16 +129,13 @@ export default function PublicarVaga() {
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
               <Input
                 type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                className="pl-10"
-                placeholder="0,00"
+                className="pl-10 bg-muted cursor-not-allowed"
                 value={valor}
-                onChange={e => setValor(e.target.value)}
-                required
+                readOnly
+                disabled
               />
             </div>
+            <p className="text-xs text-muted-foreground">Valor padrão de R$ 180,00 por vaga.</p>
           </div>
 
           {/* Vale transporte toggle */}
