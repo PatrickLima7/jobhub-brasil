@@ -1,46 +1,92 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertBanner } from '@/components/AlertBanner';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useSystemAlerts } from '@/hooks/useSystemAlerts';
+import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { Users, Briefcase } from 'lucide-react';
+
+import { FuncaoSelector } from '@/components/publicar-vaga/FuncaoSelector';
+import { AtividadesChecklist } from '@/components/publicar-vaga/AtividadesChecklist';
+import { DataHorarioBlock } from '@/components/publicar-vaga/DataHorarioBlock';
+import { BeneficiosChecklist } from '@/components/publicar-vaga/BeneficiosChecklist';
+import { QuantidadeVagas } from '@/components/publicar-vaga/QuantidadeVagas';
+import { RequisitosChecklist } from '@/components/publicar-vaga/RequisitosChecklist';
+import { ConversionBlock } from '@/components/publicar-vaga/ConversionBlock';
+
+type TipoVaga = 'freelancer' | 'clt';
+type PosicionamentoValor = 'acima' | 'padrao' | 'negociavel';
+type SalarioTipo = 'a_combinar' | 'fixo' | 'fixo_comissao';
+type RegimeTrabalho = 'integral' | 'meio_periodo' | 'escala_6x1' | 'escala_5x2';
+
+const BENEFICIOS_FREELANCER = [
+  'Vale transporte',
+  'Alimentação no local',
+  'Bebida liberada',
+  'Comissão / bônus',
+];
+
+const BENEFICIOS_CLT = [
+  'Vale transporte',
+  'Vale refeição / alimentação',
+  'Plano de saúde',
+  'Comissão',
+];
 
 export default function PublicarVaga() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { checkCompanyProfile } = useSystemAlerts();
+
+  const [tipoVaga, setTipoVaga] = useState<TipoVaga | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [profileAlert, setProfileAlert] = useState('');
+
+  // Shared fields
   const [funcao, setFuncao] = useState('');
-  const [descricao, setDescricao] = useState('');
+  const [atividades, setAtividades] = useState<string[]>([]);
+  const [beneficios, setBeneficios] = useState<string[]>([]);
+  const [numVagas, setNumVagas] = useState(1);
+  const [requisitos, setRequisitos] = useState<string[]>([]);
+
+  // Freelancer fields
   const [dataEvento, setDataEvento] = useState<Date>();
   const [horarioInicio, setHorarioInicio] = useState('');
   const [horarioFim, setHorarioFim] = useState('');
-  const [valor] = useState('180');
-  const [incluirVT, setIncluirVT] = useState(false);
-  const [valorVT, setValorVT] = useState('');
-  const [numVagas, setNumVagas] = useState('1');
-  const [requisitos, setRequisitos] = useState('');
-  const [profileAlert, setProfileAlert] = useState('');
+  const [valor, setValor] = useState('180');
+  const [posicionamento, setPosicionamento] = useState<PosicionamentoValor>('padrao');
+  const [destaque, setDestaque] = useState(false);
+  const [urgente, setUrgente] = useState(false);
 
-  const valorNum = parseFloat(valor) || 0;
-  const vtNum = incluirVT ? (parseFloat(valorVT) || 0) : 0;
-  const total = valorNum + vtNum;
-  const taxa = total * 0.22;
+  // CLT fields
+  const [regimeTrabalho, setRegimeTrabalho] = useState<RegimeTrabalho>('integral');
+  const [salario, setSalario] = useState('');
+  const [salarioTipo, setSalarioTipo] = useState<SalarioTipo>('fixo');
+  const [infoAdicionais, setInfoAdicionais] = useState('');
+
+  const resetForm = () => {
+    setFuncao(''); setAtividades([]); setBeneficios([]);
+    setNumVagas(1); setRequisitos([]);
+    setDataEvento(undefined); setHorarioInicio(''); setHorarioFim('');
+    setValor('180'); setPosicionamento('padrao');
+    setDestaque(false); setUrgente(false);
+    setRegimeTrabalho('integral'); setSalario('');
+    setSalarioTipo('fixo'); setInfoAdicionais('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !dataEvento) return;
+    if (!user || !funcao) return;
+
+    if (tipoVaga === 'freelancer' && !dataEvento) {
+      toast({ title: 'Selecione a data do evento', variant: 'destructive' });
+      return;
+    }
 
     const profileCheck = await checkCompanyProfile(user.id);
     if (!profileCheck.valid) {
@@ -48,25 +94,47 @@ export default function PublicarVaga() {
       return;
     }
     setProfileAlert('');
-
     setSubmitting(true);
+
     try {
-      const { error } = await supabase.from('jobs').insert({
+      const insertData: Record<string, unknown> = {
         company_id: user.id,
         funcao,
-        descricao,
-        data_evento: format(dataEvento, 'yyyy-MM-dd'),
-        horario_inicio: horarioInicio,
-        horario_fim: horarioFim,
-        valor: valorNum,
-        vale_transporte: vtNum,
-        num_vagas: parseInt(numVagas) || 1,
-        requisitos: requisitos || null,
-      });
+        tipo_vaga: tipoVaga,
+        atividades,
+        beneficios,
+        num_vagas: numVagas,
+        requisitos_checklist: requisitos,
+        requisitos: requisitos.join(', ') || null,
+        descricao: atividades.join(', ') || null,
+      };
+
+      if (tipoVaga === 'freelancer') {
+        Object.assign(insertData, {
+          data_evento: format(dataEvento!, 'yyyy-MM-dd'),
+          horario_inicio: horarioInicio,
+          horario_fim: horarioFim,
+          valor: parseFloat(valor) || 180,
+          posicionamento_valor: posicionamento,
+          destaque,
+          urgente,
+        });
+      } else {
+        Object.assign(insertData, {
+          data_evento: format(new Date(), 'yyyy-MM-dd'),
+          regime_trabalho: regimeTrabalho,
+          valor: parseFloat(salario) || 0,
+          salario_tipo: salarioTipo,
+          informacoes_adicionais: infoAdicionais || null,
+        });
+      }
+
+      const { error } = await supabase.from('jobs').insert(insertData);
       if (error) throw error;
-      toast({ title: 'Vaga publicada com sucesso!' });
-      setFuncao(''); setDescricao(''); setDataEvento(undefined); setHorarioInicio('');
-      setHorarioFim(''); setIncluirVT(false); setValorVT(''); setNumVagas('1'); setRequisitos('');
+
+      toast({ title: tipoVaga === 'clt' ? 'Vaga CLT publicada com sucesso!' : 'Vaga publicada com sucesso!' });
+      resetForm();
+      setTipoVaga(null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       toast({ title: 'Erro', description: message, variant: 'destructive' });
@@ -85,123 +153,194 @@ export default function PublicarVaga() {
         </div>
       )}
 
-      <div className="border rounded-lg p-6">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Função</Label>
-            <Input placeholder="Ex: Garçom, Bartender" value={funcao} onChange={e => setFuncao(e.target.value)} required />
-          </div>
+      {/* Tipo de Vaga Selector */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {([
+          { type: 'freelancer' as TipoVaga, label: 'Freelancer / Diária', icon: Users, desc: 'Contrate para um evento ou dia' },
+          { type: 'clt' as TipoVaga, label: 'Vaga CLT', icon: Briefcase, desc: 'Contratação com carteira assinada' },
+        ]).map(({ type, label, icon: Icon, desc }) => (
+          <motion.button
+            key={type}
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setTipoVaga(type)}
+            className={cn(
+              'flex flex-col items-center gap-2 p-5 rounded-lg border text-center transition-colors',
+              tipoVaga === type
+                ? 'border-accent bg-accent/10'
+                : 'border-border bg-secondary hover:border-foreground/30'
+            )}
+          >
+            <Icon className={cn('h-6 w-6', tipoVaga === type ? 'text-accent' : 'text-muted-foreground')} />
+            <span className="text-sm font-semibold">{label}</span>
+            <span className="text-xs text-muted-foreground">{desc}</span>
+          </motion.button>
+        ))}
+      </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Descrição da vaga</Label>
-            <Textarea className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background min-h-[100px]" placeholder="Descreva a vaga..." value={descricao} onChange={e => setDescricao(e.target.value)} />
-          </div>
+      <AnimatePresence mode="wait">
+        {tipoVaga && (
+          <motion.div
+            key={tipoVaga}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="border rounded-lg p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <FuncaoSelector value={funcao} onChange={setFuncao} />
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Data do evento/serviço</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn('w-full justify-start text-left font-normal bg-secondary', !dataEvento && 'text-muted-foreground')}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dataEvento ? format(dataEvento, "dd/MM/yyyy", { locale: ptBR }) : 'Selecione a data'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dataEvento} onSelect={setDataEvento} className="p-3 pointer-events-auto" />
-              </PopoverContent>
-            </Popover>
-          </div>
+                {tipoVaga === 'clt' && (
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-medium text-muted-foreground">Regime de trabalho</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { v: 'integral' as RegimeTrabalho, l: 'Tempo integral' },
+                        { v: 'meio_periodo' as RegimeTrabalho, l: 'Meio período' },
+                        { v: 'escala_6x1' as RegimeTrabalho, l: 'Escala 6x1' },
+                        { v: 'escala_5x2' as RegimeTrabalho, l: 'Escala 5x2' },
+                      ]).map(({ v, l }) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setRegimeTrabalho(v)}
+                          className={cn(
+                            'px-3 py-2.5 rounded-md border text-sm transition-colors',
+                            regimeTrabalho === v
+                              ? 'border-accent bg-accent/10 text-foreground font-medium'
+                              : 'border-border text-muted-foreground hover:border-foreground/30'
+                          )}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-[13px] font-medium text-muted-foreground">Horário de início</Label>
-              <Input type="time" value={horarioInicio} onChange={e => setHorarioInicio(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[13px] font-medium text-muted-foreground">Horário de fim</Label>
-              <Input type="time" value={horarioFim} onChange={e => setHorarioFim(e.target.value)} />
-            </div>
-          </div>
+                <AtividadesChecklist value={atividades} onChange={setAtividades} />
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Valor fixo da vaga</Label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-              <Input
-                type="number"
-                className="pl-10 bg-muted cursor-not-allowed"
-                value={valor}
-                readOnly
-                disabled
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">Valor padrão de R$ 180,00 por vaga.</p>
-          </div>
+                {tipoVaga === 'freelancer' && (
+                  <>
+                    <DataHorarioBlock
+                      dataEvento={dataEvento}
+                      onDataChange={setDataEvento}
+                      horarioInicio={horarioInicio}
+                      horarioFim={horarioFim}
+                      onHorarioInicioChange={setHorarioInicio}
+                      onHorarioFimChange={setHorarioFim}
+                    />
 
-          {/* Vale transporte toggle */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-[13px] font-medium text-muted-foreground">Incluir vale transporte?</Label>
-              <Switch checked={incluirVT} onCheckedChange={setIncluirVT} />
-            </div>
+                    <div className="space-y-3">
+                      <label className="text-[13px] font-medium text-muted-foreground">Quanto você vai pagar?</label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          className="pl-10"
+                          value={valor}
+                          onChange={(e) => setValor(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        {([
+                          { v: 'acima' as PosicionamentoValor, l: 'Valor acima da média (atrai mais rápido)' },
+                          { v: 'padrao' as PosicionamentoValor, l: 'Valor padrão' },
+                          { v: 'negociavel' as PosicionamentoValor, l: 'Valor negociável' },
+                        ]).map(({ v, l }) => (
+                          <label key={v} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="posicionamento"
+                              checked={posicionamento === v}
+                              onChange={() => setPosicionamento(v)}
+                              className="accent-[hsl(var(--accent))]"
+                            />
+                            <span className="text-sm">{l}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
-            {incluirVT && (
-              <div className="space-y-1.5">
-                <Label className="text-[13px] font-medium text-muted-foreground">Valor do vale transporte</Label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0"
-                    className="pl-10"
-                    placeholder="0,00"
-                    value={valorVT}
-                    onChange={e => setValorVT(e.target.value)}
+                {tipoVaga === 'clt' && (
+                  <div className="space-y-3">
+                    <label className="text-[13px] font-medium text-muted-foreground">Salário</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        className="pl-10"
+                        placeholder="0,00"
+                        value={salario}
+                        onChange={(e) => setSalario(e.target.value)}
+                        disabled={salarioTipo === 'a_combinar'}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      {([
+                        { v: 'a_combinar' as SalarioTipo, l: 'A combinar' },
+                        { v: 'fixo' as SalarioTipo, l: 'Fixo' },
+                        { v: 'fixo_comissao' as SalarioTipo, l: 'Fixo + comissão' },
+                      ]).map(({ v, l }) => (
+                        <label key={v} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="salario_tipo"
+                            checked={salarioTipo === v}
+                            onChange={() => setSalarioTipo(v)}
+                            className="accent-[hsl(var(--accent))]"
+                          />
+                          <span className="text-sm">{l}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-[13px] font-medium text-muted-foreground">Benefícios incluídos</label>
+                  <BeneficiosChecklist
+                    options={tipoVaga === 'clt' ? BENEFICIOS_CLT : BENEFICIOS_FREELANCER}
+                    value={beneficios}
+                    onChange={setBeneficios}
+                    showOutro={tipoVaga === 'clt'}
                   />
                 </div>
-              </div>
-            )}
 
-            {incluirVT && (valorNum > 0 || vtNum > 0) && (
-              <div className="bg-secondary border rounded-lg p-4 space-y-1.5 text-[13px]">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Valor da vaga:</span>
-                  <span>R$ {valorNum.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Vale transporte:</span>
-                  <span>R$ {vtNum.toFixed(2)}</span>
-                </div>
-                <div className="border-t border-border my-1.5" />
-                <div className="flex justify-between font-semibold text-foreground">
-                  <span>Total da contratação:</span>
-                  <span>R$ {total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-accent">
-                  <span>Taxa TôLivre (22%):</span>
-                  <span>R$ {taxa.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-          </div>
+                <QuantidadeVagas value={numVagas} onChange={setNumVagas} />
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Número de vagas</Label>
-            <Input type="number" min="1" value={numVagas} onChange={e => setNumVagas(e.target.value)} required />
-          </div>
+                <RequisitosChecklist value={requisitos} onChange={setRequisitos} isCLT={tipoVaga === 'clt'} />
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Requisitos (opcional)</Label>
-            <Textarea className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background" placeholder="Requisitos..." value={requisitos} onChange={e => setRequisitos(e.target.value)} />
-          </div>
+                {tipoVaga === 'clt' && (
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-medium text-muted-foreground">Informações adicionais (opcional)</label>
+                    <Textarea
+                      className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background"
+                      placeholder="Alguma informação extra sobre a vaga ou sobre o estabelecimento?"
+                      value={infoAdicionais}
+                      onChange={(e) => setInfoAdicionais(e.target.value)}
+                    />
+                  </div>
+                )}
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? 'Publicando...' : 'Publicar Vaga'}
-          </Button>
-        </form>
-      </div>
+                <ConversionBlock
+                  isCLT={tipoVaga === 'clt'}
+                  submitting={submitting}
+                  destaque={destaque}
+                  urgente={urgente}
+                  onDestaqueChange={setDestaque}
+                  onUrgenteChange={setUrgente}
+                />
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
