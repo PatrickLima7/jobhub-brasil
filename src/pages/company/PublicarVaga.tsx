@@ -97,7 +97,7 @@ export default function PublicarVaga() {
     setSubmitting(true);
 
     try {
-      const insertData: Record<string, unknown> = {
+      const baseData = {
         company_id: user.id,
         funcao,
         tipo_vaga: tipoVaga,
@@ -107,29 +107,21 @@ export default function PublicarVaga() {
         requisitos_checklist: requisitos,
         requisitos: requisitos.join(', ') || null,
         descricao: atividades.join(', ') || null,
+        data_evento: tipoVaga === 'freelancer'
+          ? format(dataEvento!, 'yyyy-MM-dd')
+          : format(new Date(), 'yyyy-MM-dd'),
+        horario_inicio: tipoVaga === 'freelancer' ? horarioInicio : null,
+        horario_fim: tipoVaga === 'freelancer' ? horarioFim : null,
+        valor: tipoVaga === 'freelancer' ? (parseFloat(valor) || 180) : (parseFloat(salario) || 0),
+        posicionamento_valor: tipoVaga === 'freelancer' ? posicionamento : null,
+        destaque: tipoVaga === 'freelancer' ? destaque : false,
+        urgente: tipoVaga === 'freelancer' ? urgente : false,
+        regime_trabalho: tipoVaga === 'clt' ? regimeTrabalho : null,
+        salario_tipo: tipoVaga === 'clt' ? salarioTipo : null,
+        informacoes_adicionais: tipoVaga === 'clt' ? (infoAdicionais || null) : null,
       };
 
-      if (tipoVaga === 'freelancer') {
-        Object.assign(insertData, {
-          data_evento: format(dataEvento!, 'yyyy-MM-dd'),
-          horario_inicio: horarioInicio,
-          horario_fim: horarioFim,
-          valor: parseFloat(valor) || 180,
-          posicionamento_valor: posicionamento,
-          destaque,
-          urgente,
-        });
-      } else {
-        Object.assign(insertData, {
-          data_evento: format(new Date(), 'yyyy-MM-dd'),
-          regime_trabalho: regimeTrabalho,
-          valor: parseFloat(salario) || 0,
-          salario_tipo: salarioTipo,
-          informacoes_adicionais: infoAdicionais || null,
-        });
-      }
-
-      const { error } = await supabase.from('jobs').insert(insertData);
+      const { error } = await supabase.from('jobs').insert(baseData);
       if (error) throw error;
 
       toast({ title: tipoVaga === 'clt' ? 'Vaga CLT publicada com sucesso!' : 'Vaga publicada com sucesso!' });
