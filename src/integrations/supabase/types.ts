@@ -156,50 +156,80 @@ export type Database = {
       }
       jobs: {
         Row: {
+          atividades: string[] | null
+          beneficios: string[] | null
           company_id: string
           created_at: string
           data_evento: string
           descricao: string | null
+          destaque: boolean
           funcao: string
           horario_fim: string | null
           horario_inicio: string | null
           id: string
+          informacoes_adicionais: string | null
           num_vagas: number
+          posicionamento_valor: string | null
+          regime_trabalho: string | null
           requisitos: string | null
+          requisitos_checklist: string[] | null
+          salario_tipo: string | null
           status: string
           tipo_pagamento: string
+          tipo_vaga: string
+          urgente: boolean
           vale_transporte: number | null
           valor: number
         }
         Insert: {
+          atividades?: string[] | null
+          beneficios?: string[] | null
           company_id: string
           created_at?: string
           data_evento: string
           descricao?: string | null
+          destaque?: boolean
           funcao: string
           horario_fim?: string | null
           horario_inicio?: string | null
           id?: string
+          informacoes_adicionais?: string | null
           num_vagas?: number
+          posicionamento_valor?: string | null
+          regime_trabalho?: string | null
           requisitos?: string | null
+          requisitos_checklist?: string[] | null
+          salario_tipo?: string | null
           status?: string
           tipo_pagamento?: string
+          tipo_vaga?: string
+          urgente?: boolean
           vale_transporte?: number | null
           valor?: number
         }
         Update: {
+          atividades?: string[] | null
+          beneficios?: string[] | null
           company_id?: string
           created_at?: string
           data_evento?: string
           descricao?: string | null
+          destaque?: boolean
           funcao?: string
           horario_fim?: string | null
           horario_inicio?: string | null
           id?: string
+          informacoes_adicionais?: string | null
           num_vagas?: number
+          posicionamento_valor?: string | null
+          regime_trabalho?: string | null
           requisitos?: string | null
+          requisitos_checklist?: string[] | null
+          salario_tipo?: string | null
           status?: string
           tipo_pagamento?: string
+          tipo_vaga?: string
+          urgente?: boolean
           vale_transporte?: number | null
           valor?: number
         }
