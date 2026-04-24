@@ -181,6 +181,12 @@ export default function VagasDisponiveis() {
     const profileCheck = await checkFreelancerProfile(user.id);
     if (!profileCheck.valid) {
       setProfileAlert(profileCheck.message);
+      setDialogOpen(false);
+      toast({
+        title: 'Complete seu perfil',
+        description: 'Adicione cidade e funções no seu perfil para se candidatar.',
+        variant: 'destructive',
+      });
       return;
     }
     setProfileAlert('');
