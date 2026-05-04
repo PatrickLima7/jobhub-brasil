@@ -107,48 +107,102 @@ export type Database = {
         Row: {
           bio: string | null
           cidade: string | null
+          cidade_nascimento: string | null
           cpf: string | null
           created_at: string
+          cursos: Json
           data_nascimento: string | null
           disponibilidade: string[] | null
+          escolaridade: string | null
           estado: string | null
           experiencia: number | null
           funcoes: string[] | null
+          genero: string | null
           id: string
+          instagram: string | null
+          linkedin: string | null
+          niveis_experiencia: Json
           nome: string | null
+          nome_social: string | null
+          preferencia_comissao: string | null
+          referencias: Json
+          sistemas_digitais: string[]
           telefone: string | null
+          tiktok: string | null
+          tipos_trabalho: string[]
+          transporte_apoio: boolean
+          transporte_tipo: string | null
+          uniforme_apoio: boolean
+          uniforme_pecas: string[]
+          uniforme_status: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           bio?: string | null
           cidade?: string | null
+          cidade_nascimento?: string | null
           cpf?: string | null
           created_at?: string
+          cursos?: Json
           data_nascimento?: string | null
           disponibilidade?: string[] | null
+          escolaridade?: string | null
           estado?: string | null
           experiencia?: number | null
           funcoes?: string[] | null
+          genero?: string | null
           id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          niveis_experiencia?: Json
           nome?: string | null
+          nome_social?: string | null
+          preferencia_comissao?: string | null
+          referencias?: Json
+          sistemas_digitais?: string[]
           telefone?: string | null
+          tiktok?: string | null
+          tipos_trabalho?: string[]
+          transporte_apoio?: boolean
+          transporte_tipo?: string | null
+          uniforme_apoio?: boolean
+          uniforme_pecas?: string[]
+          uniforme_status?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           bio?: string | null
           cidade?: string | null
+          cidade_nascimento?: string | null
           cpf?: string | null
           created_at?: string
+          cursos?: Json
           data_nascimento?: string | null
           disponibilidade?: string[] | null
+          escolaridade?: string | null
           estado?: string | null
           experiencia?: number | null
           funcoes?: string[] | null
+          genero?: string | null
           id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          niveis_experiencia?: Json
           nome?: string | null
+          nome_social?: string | null
+          preferencia_comissao?: string | null
+          referencias?: Json
+          sistemas_digitais?: string[]
           telefone?: string | null
+          tiktok?: string | null
+          tipos_trabalho?: string[]
+          transporte_apoio?: boolean
+          transporte_tipo?: string | null
+          uniforme_apoio?: boolean
+          uniforme_pecas?: string[]
+          uniforme_status?: string | null
           updated_at?: string
           user_id?: string
         }

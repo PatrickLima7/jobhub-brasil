@@ -1,0 +1,20 @@
+-- Extend freelancer_profiles with new resume/profile fields
+ALTER TABLE public.freelancer_profiles
+  ADD COLUMN IF NOT EXISTS nome_social text,
+  ADD COLUMN IF NOT EXISTS genero text,
+  ADD COLUMN IF NOT EXISTS cidade_nascimento text,
+  ADD COLUMN IF NOT EXISTS escolaridade text,
+  ADD COLUMN IF NOT EXISTS cursos jsonb NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS referencias jsonb NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS instagram text,
+  ADD COLUMN IF NOT EXISTS tiktok text,
+  ADD COLUMN IF NOT EXISTS linkedin text,
+  ADD COLUMN IF NOT EXISTS niveis_experiencia jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS uniforme_status text,
+  ADD COLUMN IF NOT EXISTS uniforme_pecas text[] NOT NULL DEFAULT '{}'::text[],
+  ADD COLUMN IF NOT EXISTS uniforme_apoio boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS transporte_tipo text,
+  ADD COLUMN IF NOT EXISTS transporte_apoio boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sistemas_digitais text[] NOT NULL DEFAULT '{}'::text[],
+  ADD COLUMN IF NOT EXISTS preferencia_comissao text,
+  ADD COLUMN IF NOT EXISTS tipos_trabalho text[] NOT NULL DEFAULT '{}'::text[];
