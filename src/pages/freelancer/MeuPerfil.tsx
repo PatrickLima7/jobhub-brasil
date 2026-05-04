@@ -1,124 +1,173 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { AvatarUpload } from '@/components/AvatarUpload';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { SectionShell } from '@/components/perfil/SectionShell';
+import { DadosPessoaisSection } from '@/components/perfil/DadosPessoaisSection';
+import { CursosSection } from '@/components/perfil/CursosSection';
+import { ReferenciasSection } from '@/components/perfil/ReferenciasSection';
+import { RedesSociaisSection } from '@/components/perfil/RedesSociaisSection';
+import { CompatibilidadeSection } from '@/components/perfil/CompatibilidadeSection';
+import { ResumoSection, computeCompletion } from '@/components/perfil/ResumoSection';
+import type { Curso, DisponibilidadeGrid, NivelExperiencia, PerfilData, Referencia } from '@/components/perfil/types';
 
-const FUNCOES = ['Garçom', 'Garçonete', 'Bartender', 'Auxiliar de Cozinha', 'Auxiliar Geral', 'Recepcionista'];
-const DIAS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'] as const;
-const DIAS_LABELS: Record<string, string> = { seg: 'Seg', ter: 'Ter', qua: 'Qua', qui: 'Qui', sex: 'Sex', sab: 'Sáb', dom: 'Dom' };
-const PERIODOS = ['diurno', 'noturno'] as const;
+const initialForm: PerfilData = {
+  nome: '', nome_social: '', genero: '', cidade_nascimento: '',
+  cidade: '', estado: '', escolaridade: '', cpf: '', telefone: '',
+  data_nascimento: '', bio: '', experiencia: 0,
+  cursos: [], referencias: [],
+  instagram: '', tiktok: '', linkedin: '',
+  funcoes: [], niveis_experiencia: {},
+  uniforme_status: '', uniforme_pecas: [], uniforme_apoio: false,
+  transporte_tipo: '', transporte_apoio: false,
+  sistemas_digitais: [], preferencia_comissao: '', tipos_trabalho: [],
+  disponibilidade: {},
+};
 
-type DisponibilidadeGrid = Record<string, string[]>;
+type SectionKey = 'dados' | 'cursos' | 'referencias' | 'redes' | 'compat' | 'resumo';
 
-function calcAge(dateStr: string): number {
-  const birth = new Date(dateStr);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+function parseDisponibilidade(raw: unknown): DisponibilidadeGrid {
+  if (!Array.isArray(raw) || raw.length === 0) return {};
+  const first = raw[0];
+  if (typeof first !== 'string') return {};
+  if (first.startsWith('{')) {
+    try { return JSON.parse(first) as DisponibilidadeGrid; } catch { return {}; }
+  }
+  // legacy day strings
+  const grid: DisponibilidadeGrid = {};
+  (raw as string[]).forEach(d => {
+    const k = d.toLowerCase().replace('á', 'a');
+    grid[k] = ['diurno', 'noturno'];
+  });
+  return grid;
 }
 
 export default function MeuPerfil() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    nome: '', cpf: '', telefone: '', cidade: '', estado: '',
-    funcoes: [] as string[], experiencia: 0, bio: '',
-    data_nascimento: '',
-  });
-  const [disponibilidade, setDisponibilidade] = useState<DisponibilidadeGrid>({});
+  const [form, setForm] = useState<PerfilData>(initialForm);
+  const [open, setOpen] = useState<SectionKey>('dados');
+  const lastMilestoneRef = useRef<number>(0);
 
   useEffect(() => {
     if (!user) return;
     supabase.from('freelancer_profiles').select('*').eq('user_id', user.id).single()
       .then(({ data }) => {
         if (data) {
-          // Parse disponibilidade - could be old array format or new JSON object
-          let dispGrid: DisponibilidadeGrid = {};
-          if (data.disponibilidade) {
-            if (Array.isArray(data.disponibilidade) && data.disponibilidade.length > 0) {
-              if (typeof data.disponibilidade[0] === 'string' && !data.disponibilidade[0].startsWith('{')) {
-                // Old format: simple day strings like ["Seg", "Ter"]
-                // Convert to new grid with empty periods
-                data.disponibilidade.forEach((d: string) => {
-                  const key = d.toLowerCase().replace('á', 'a');
-                  dispGrid[key] = ['diurno', 'noturno'];
-                });
-              } else {
-                // Try parsing as JSON string
-                try {
-                  dispGrid = JSON.parse(data.disponibilidade[0]);
-                } catch {
-                  dispGrid = {};
-                }
-              }
-            }
-          }
-
+          const d = data as Record<string, unknown>;
           setForm({
-            nome: data.nome ?? '', cpf: data.cpf ?? '', telefone: data.telefone ?? '',
-            cidade: data.cidade ?? '', estado: data.estado ?? '',
-            funcoes: data.funcoes ?? [], experiencia: data.experiencia ?? 0,
-            bio: data.bio ?? '',
-            data_nascimento: (data as Record<string, unknown>).data_nascimento as string ?? '',
+            nome: (d.nome as string) ?? '',
+            nome_social: (d.nome_social as string) ?? '',
+            genero: (d.genero as string) ?? '',
+            cidade_nascimento: (d.cidade_nascimento as string) ?? '',
+            cidade: (d.cidade as string) ?? '',
+            estado: (d.estado as string) ?? '',
+            escolaridade: (d.escolaridade as string) ?? '',
+            cpf: (d.cpf as string) ?? '',
+            telefone: (d.telefone as string) ?? '',
+            data_nascimento: (d.data_nascimento as string) ?? '',
+            bio: (d.bio as string) ?? '',
+            experiencia: (d.experiencia as number) ?? 0,
+            cursos: (d.cursos as Curso[]) ?? [],
+            referencias: (d.referencias as Referencia[]) ?? [],
+            instagram: (d.instagram as string) ?? '',
+            tiktok: (d.tiktok as string) ?? '',
+            linkedin: (d.linkedin as string) ?? '',
+            funcoes: (d.funcoes as string[]) ?? [],
+            niveis_experiencia: (d.niveis_experiencia as Record<string, NivelExperiencia>) ?? {},
+            uniforme_status: (d.uniforme_status as string) ?? '',
+            uniforme_pecas: (d.uniforme_pecas as string[]) ?? [],
+            uniforme_apoio: (d.uniforme_apoio as boolean) ?? false,
+            transporte_tipo: (d.transporte_tipo as string) ?? '',
+            transporte_apoio: (d.transporte_apoio as boolean) ?? false,
+            sistemas_digitais: (d.sistemas_digitais as string[]) ?? [],
+            preferencia_comissao: (d.preferencia_comissao as string) ?? '',
+            tipos_trabalho: (d.tipos_trabalho as string[]) ?? [],
+            disponibilidade: parseDisponibilidade(d.disponibilidade),
           });
-          setDisponibilidade(dispGrid);
         }
         setLoading(false);
       });
   }, [user]);
 
-  const toggleFuncao = (f: string) => {
-    setForm(prev => ({
-      ...prev,
-      funcoes: prev.funcoes.includes(f) ? prev.funcoes.filter(x => x !== f) : [...prev.funcoes, f],
-    }));
+  const completion = useMemo(() => computeCompletion(form), [form]);
+
+  // Milestone toasts
+  useEffect(() => {
+    const milestones = [50, 75, 100];
+    const reached = milestones.filter(m => completion.percent >= m).pop() ?? 0;
+    if (reached > lastMilestoneRef.current && lastMilestoneRef.current !== 0) {
+      if (reached === 100) toast.success('🎉 Perfil 100% completo!');
+      else toast.success(`Perfil ${reached}% completo!`);
+    }
+    lastMilestoneRef.current = reached;
+  }, [completion.percent]);
+
+  const sectionStatus = (k: SectionKey) => {
+    switch (k) {
+      case 'dados': return completion.dadosOk ? 'completo' : 'incompleto';
+      case 'cursos': return completion.qualOk ? 'completo' : 'recomendado';
+      case 'referencias': return completion.refOk ? 'completo' : 'recomendado';
+      case 'redes': return completion.igOk ? 'muito-recomendado' : 'recomendado';
+      case 'compat': return completion.compatOk ? 'completo' : 'recomendado';
+      default: return undefined;
+    }
   };
 
-  const togglePeriodo = (dia: string, periodo: string) => {
-    setDisponibilidade(prev => {
-      const current = prev[dia] ?? [];
-      const updated = current.includes(periodo)
-        ? current.filter(p => p !== periodo)
-        : [...current, periodo];
-      const next = { ...prev };
-      if (updated.length === 0) {
-        delete next[dia];
-      } else {
-        next[dia] = updated;
-      }
-      return next;
-    });
+  const sectionStatusLabel = (k: SectionKey): string | undefined => {
+    if (k === 'cursos' && !completion.qualOk) return 'Opcional mas recomendado';
+    if (k === 'redes' && !completion.igOk) return 'Muito recomendado';
+    return undefined;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const toggle = (k: SectionKey) => setOpen(prev => prev === k ? prev : k);
+
+  const handleSubmit = async () => {
     if (!user) return;
+    if (!form.nome.trim()) { toast.error('Nome completo é obrigatório'); setOpen('dados'); return; }
     setSubmitting(true);
     try {
-      // Store disponibilidade as JSON string in the array field
-      const dispArray = [JSON.stringify(disponibilidade)];
-      const { error } = await supabase.from('freelancer_profiles')
-        .update({
-          ...form,
-          disponibilidade: dispArray,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id);
+      const payload = {
+        nome: form.nome,
+        nome_social: form.nome_social || null,
+        genero: form.genero || null,
+        cidade_nascimento: form.cidade_nascimento || null,
+        cidade: form.cidade || null,
+        estado: form.estado || null,
+        escolaridade: form.escolaridade || null,
+        cpf: form.cpf || null,
+        telefone: form.telefone || null,
+        data_nascimento: form.data_nascimento || null,
+        bio: form.bio || null,
+        experiencia: form.experiencia,
+        cursos: form.cursos as unknown as never,
+        referencias: form.referencias as unknown as never,
+        instagram: form.instagram || null,
+        tiktok: form.tiktok || null,
+        linkedin: form.linkedin || null,
+        funcoes: form.funcoes,
+        niveis_experiencia: form.niveis_experiencia as unknown as never,
+        uniforme_status: form.uniforme_status || null,
+        uniforme_pecas: form.uniforme_pecas,
+        uniforme_apoio: form.uniforme_apoio,
+        transporte_tipo: form.transporte_tipo || null,
+        transporte_apoio: form.transporte_apoio,
+        sistemas_digitais: form.sistemas_digitais,
+        preferencia_comissao: form.preferencia_comissao || null,
+        tipos_trabalho: form.tipos_trabalho,
+        disponibilidade: [JSON.stringify(form.disponibilidade)],
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('freelancer_profiles').update(payload).eq('user_id', user.id);
       if (error) throw error;
-      toast({ title: 'Perfil salvo!' });
+      toast.success('Perfil salvo!');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
-      toast({ title: 'Erro', description: message, variant: 'destructive' });
+      toast.error('Erro ao salvar', { description: message });
     } finally {
       setSubmitting(false);
     }
@@ -127,141 +176,85 @@ export default function MeuPerfil() {
   if (loading) return <p className="text-muted-foreground">Carregando...</p>;
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-display mb-8">Meu Perfil</h1>
-      <div className="border rounded-lg p-6">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {user && (
-            <div className="flex justify-center mb-2">
-              <AvatarUpload userId={user.id} type="freelancer" name={form.nome || 'F'} size={80} />
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Nome completo</Label>
-            <Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
+    <div className="max-w-3xl mx-auto pb-24 md:pb-8">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+        <div className="flex items-center justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-display">Meu Perfil</h1>
+            <p className="text-[13px] text-muted-foreground mt-1">
+              Construa um perfil profissional completo · {completion.percent}% completo
+            </p>
           </div>
+          {user && <AvatarUpload userId={user.id} type="freelancer" name={form.nome || 'F'} size={64} />}
+        </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Data de nascimento</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                type="date"
-                value={form.data_nascimento}
-                onChange={e => setForm(f => ({ ...f, data_nascimento: e.target.value }))}
-                className="flex-1"
-              />
-              {form.data_nascimento && (
-                <span className="text-[13px] text-muted-foreground whitespace-nowrap">
-                  {calcAge(form.data_nascimento)} anos
-                </span>
-              )}
-            </div>
-          </div>
+        <div className="space-y-3">
+          <SectionShell
+            title="Sobre você"
+            status={sectionStatus('dados')}
+            open={open === 'dados'}
+            onToggle={() => toggle('dados')}
+          >
+            <DadosPessoaisSection form={form} setForm={setForm} />
+          </SectionShell>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-[13px] font-medium text-muted-foreground">CPF</Label>
-              <Input placeholder="000.000.000-00" value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[13px] font-medium text-muted-foreground">Telefone (WhatsApp)</Label>
-              <Input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-[13px] font-medium text-muted-foreground">Cidade</Label>
-              <Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[13px] font-medium text-muted-foreground">Estado</Label>
-              <Input value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))} />
-            </div>
-          </div>
+          <SectionShell
+            title="Formação e cursos"
+            subtitle="Até 3 cursos profissionalizantes"
+            status={sectionStatus('cursos')}
+            statusLabel={sectionStatusLabel('cursos')}
+            open={open === 'cursos'}
+            onToggle={() => toggle('cursos')}
+          >
+            <CursosSection form={form} setForm={setForm} />
+          </SectionShell>
 
-          <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-muted-foreground">Funções que exerce</Label>
-            <div className="flex flex-wrap gap-2">
-              {FUNCOES.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => toggleFuncao(f)}
-                  className={cn(
-                    'inline-flex items-center rounded-pill px-3 py-1.5 text-xs font-medium border transition-colors cursor-pointer',
-                    form.funcoes.includes(f)
-                      ? 'bg-foreground text-background border-foreground'
-                      : 'bg-background text-foreground border-border hover:bg-secondary'
-                  )}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SectionShell
+            title="Referências profissionais"
+            subtitle="Últimas 3 empresas/estabelecimentos onde trabalhou"
+            status={sectionStatus('referencias')}
+            open={open === 'referencias'}
+            onToggle={() => toggle('referencias')}
+          >
+            <ReferenciasSection form={form} setForm={setForm} />
+          </SectionShell>
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Anos de experiência</Label>
-            <Input type="number" min="0" value={form.experiencia} onChange={e => setForm(f => ({ ...f, experiencia: parseInt(e.target.value) || 0 }))} />
-          </div>
+          <SectionShell
+            title="Conecte-se"
+            subtitle="Seu Instagram aumenta em 90% a chance de contratação"
+            status={sectionStatus('redes')}
+            statusLabel={sectionStatusLabel('redes')}
+            open={open === 'redes'}
+            onToggle={() => toggle('redes')}
+          >
+            <RedesSociaisSection form={form} setForm={setForm} />
+          </SectionShell>
 
-          <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-muted-foreground">Mini bio</Label>
-            <Textarea className="bg-secondary border-input focus-visible:border-foreground focus-visible:bg-background" value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} placeholder="Conte um pouco sobre você..." />
-          </div>
+          <SectionShell
+            title="Como você trabalha"
+            status={sectionStatus('compat')}
+            statusLabel={completion.compatOk ? undefined : 'Importante para match'}
+            open={open === 'compat'}
+            onToggle={() => toggle('compat')}
+          >
+            <CompatibilidadeSection form={form} setForm={setForm} />
+          </SectionShell>
 
-          {/* Availability grid */}
-          <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-muted-foreground">Disponibilidade</Label>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="w-12" />
-                    {PERIODOS.map(p => (
-                      <th key={p} className="text-center text-[12px] font-medium text-muted-foreground py-2 capitalize">
-                        {p === 'diurno' ? 'Diurno' : 'Noturno'}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {DIAS.map(dia => (
-                    <tr key={dia}>
-                      <td className="text-[12px] font-medium text-muted-foreground py-1 pr-2">
-                        {DIAS_LABELS[dia]}
-                      </td>
-                      {PERIODOS.map(periodo => {
-                        const active = (disponibilidade[dia] ?? []).includes(periodo);
-                        return (
-                          <td key={periodo} className="text-center py-1 px-1">
-                            <button
-                              type="button"
-                              onClick={() => togglePeriodo(dia, periodo)}
-                              className={cn(
-                                'min-w-[60px] h-10 rounded-md text-[12px] font-medium transition-colors duration-150 border',
-                                active
-                                  ? 'bg-foreground text-background border-foreground'
-                                  : 'bg-secondary text-muted-foreground border-border hover:bg-background'
-                              )}
-                            >
-                              {active ? '✓' : '—'}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <SectionShell
+            title="Seu perfil"
+            open={open === 'resumo'}
+            onToggle={() => toggle('resumo')}
+          >
+            <ResumoSection form={form} />
+          </SectionShell>
+        </div>
+      </motion.div>
 
-          <Button type="submit" className="w-full btn-press" disabled={submitting}>
-            {submitting ? 'Salvando...' : 'Salvar Perfil'}
-          </Button>
-        </form>
+      {/* Sticky save (mobile) + inline (desktop) */}
+      <div className="md:mt-6 fixed md:static bottom-0 left-0 right-0 bg-white md:bg-transparent border-t md:border-0 border-[#E5E5E5] p-4 md:p-0 z-30">
+        <Button onClick={handleSubmit} disabled={submitting} className="w-full">
+          {submitting ? 'Salvando...' : 'Salvar alterações'}
+        </Button>
       </div>
     </div>
   );
