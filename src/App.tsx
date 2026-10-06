@@ -1,0 +1,87 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import CompanyLayout from "@/layouts/CompanyLayout";
+import FreelancerLayout from "@/layouts/FreelancerLayout";
+import AdminLayout from "@/layouts/AdminLayout";
+import Auth from "@/pages/Auth";
+import CompanyDashboard from "@/pages/company/Dashboard";
+import PublicarVaga from "@/pages/company/PublicarVaga";
+import MinhasVagas from "@/pages/company/MinhasVagas";
+import UltimosContratados from "@/pages/company/UltimosContratados";
+import MinhaEmpresa from "@/pages/company/MinhaEmpresa";
+import FreelancersDisponiveis from "@/pages/company/FreelancersDisponiveis";
+import VagasDisponiveis from "@/pages/freelancer/VagasDisponiveis";
+import MinhasCandidaturas from "@/pages/freelancer/MinhasCandidaturas";
+import MeuPerfil from "@/pages/freelancer/MeuPerfil";
+import ChatPage from "@/pages/ChatPage";
+import AdminDashboard from "@/pages/admin/Dashboard";
+import AdminEmpresas from "@/pages/admin/Empresas";
+import AdminFreelancers from "@/pages/admin/Freelancers";
+import AdminVagas from "@/pages/admin/Vagas";
+import AdminFinanceiro from "@/pages/admin/Financeiro";
+import AdminRelatorios from "@/pages/admin/Relatorios";
+import Onboarding from "@/pages/Onboarding";
+import NotFound from "./pages/NotFound";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/auth" replace />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+
+            <Route path="/empresa" element={<ProtectedRoute requiredRole="company"><CompanyLayout /></ProtectedRoute>}>
+              <Route index element={<CompanyDashboard />} />
+              <Route path="publicar" element={<PublicarVaga />} />
+              <Route path="vagas" element={<MinhasVagas />} />
+              <Route path="contratados" element={<UltimosContratados />} />
+              <Route path="freelancers" element={<FreelancersDisponiveis />} />
+              <Route path="chat" element={<ChatPage />} />
+              <Route path="perfil" element={<MinhaEmpresa />} />
+            </Route>
+
+            <Route path="/freelancer" element={<ProtectedRoute requiredRole="freelancer"><FreelancerLayout /></ProtectedRoute>}>
+              <Route index element={<VagasDisponiveis />} />
+              <Route path="candidaturas" element={<MinhasCandidaturas />} />
+              <Route path="chat" element={<ChatPage />} />
+              <Route path="perfil" element={<MeuPerfil />} />
+            </Route>
+
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="empresas" element={<AdminEmpresas />} />
+              <Route path="freelancers" element={<AdminFreelancers />} />
+              <Route path="vagas" element={<AdminVagas />} />
+              <Route path="financeiro" element={<AdminFinanceiro />} />
+              <Route path="relatorios" element={<AdminRelatorios />} />
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
+
+export default App;

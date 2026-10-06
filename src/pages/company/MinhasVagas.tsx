@@ -1,0 +1,623 @@
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StarRating } from '@/components/StarRating';
+import { RatingModal } from '@/components/RatingModal';
+import { UserAvatar } from '@/components/AvatarUpload';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { StaggerContainer, StaggerItem, FloatingIcon } from '@/components/PageTransition';
+import { SkeletonCard } from '@/components/SkeletonCard';
+import { ChevronDown, ChevronUp, X, MapPin, Briefcase, SearchX, User, Wallet, Award } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface CandidateData {
+  id: string;
+  status: string;
+  freelancer_id: string;
+  freelancer_cidade: string;
+  freelancer_experiencia: number;
+  freelancer_disponibilidade: string[];
+  freelancer_data_nascimento: string | null;
+  avgRating: number;
+  reviewCount: number;
+  completed_jobs: number;
+}
+
+interface JobData {
+  id: string;
+  funcao: string;
+  data_evento: string;
+  valor: number;
+  status: string;
+  candidaturas: number;
+  created_at: string;
+  noCandidateAlert: boolean;
+}
+
+function calcAge(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const birth = new Date(dateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function parseDisponibilidade(disp: string[]): string {
+  if (!disp || disp.length === 0) return '';
+  try {
+    const grid = JSON.parse(disp[0]) as Record<string, string[]>;
+    const labels: Record<string, string> = { seg: 'Seg', ter: 'Ter', qua: 'Qua', qui: 'Qui', sex: 'Sex', sab: 'Sáb', dom: 'Dom' };
+    const parts: string[] = [];
+    Object.entries(grid).forEach(([dia, periodos]) => {
+      periodos.forEach(p => {
+        parts.push(`${labels[dia] ?? dia} ${p === 'diurno' ? 'Diurno' : 'Noturno'}`);
+      });
+    });
+    return parts.join(' · ');
+  } catch {
+    return disp.join(', ');
+  }
+}
+
+export default function MinhasVagas() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [jobs, setJobs] = useState<JobData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('todas');
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<CandidateData[]>([]);
+  const [candidateSort, setCandidateSort] = useState<'rating' | 'recent'>('rating');
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [selectedJobFuncao, setSelectedJobFuncao] = useState('');
+  const [cancelJobId, setCancelJobId] = useState<string | null>(null);
+
+  // Rating and Finalization state
+  const [finalizarAppId, setFinalizarAppId] = useState<string | null>(null);
+  const [finalizarFreelancerId, setFinalizarFreelancerId] = useState<string | null>(null);
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+
+  const fetchJobs = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('jobs').select('*').eq('company_id', user.id).order('created_at', { ascending: false });
+
+    const jobsWithCounts = await Promise.all(
+      (data ?? []).map(async (job) => {
+        const { count } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('job_id', job.id);
+        const candidaturas = count ?? 0;
+        const createdAt = new Date(job.created_at);
+        const hoursAgo = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+        const noCandidateAlert = job.status === 'ativa' && hoursAgo > 48 && candidaturas === 0;
+        return { ...job, candidaturas, noCandidateAlert } as JobData;
+      })
+    );
+    setJobs(jobsWithCounts);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    fetchJobs();
+
+    // Realtime: listen for application status changes so when freelancer confirms,
+    // the company sees it update immediately without needing to refresh.
+    const setupRealtime = async () => {
+      const { data: jobsData } = await supabase.from('jobs').select('id').eq('company_id', user.id);
+      const jobIds = (jobsData ?? []).map(j => j.id);
+      if (jobIds.length === 0) return;
+
+      const channel = supabase
+        .channel(`minhas-vagas-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'applications',
+          },
+          (payload) => {
+            const updated = payload.new as { id: string; status: string; job_id: string };
+            // Only react to applications from this company's jobs
+            if (!jobIds.includes(updated.job_id)) return;
+
+            // Update candidates list in real time if that job is currently expanded
+            setCandidates(prev =>
+              prev.map(c => c.id === updated.id ? { ...c, status: updated.status } : c)
+            );
+
+            // If the application went to 'concluido', also refresh the job counts
+            if (updated.status === 'concluido') {
+              fetchJobs();
+            }
+          }
+        )
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    };
+
+    const cleanupPromise = setupRealtime();
+    return () => { cleanupPromise.then(fn => fn && fn()); };
+  }, [user]);
+
+  const filteredJobs = filter === 'todas' ? jobs : jobs.filter((j) => j.status === filter);
+
+  const handleCancelar = async (jobId: string) => {
+    await supabase.from('jobs').update({ status: 'cancelada' }).eq('id', jobId);
+    toast({ title: 'Vaga cancelada. Saldo adicionado à sua conta.' });
+    setCancelJobId(null);
+    fetchJobs();
+  };
+
+  const handleEncerrar = async (jobId: string) => {
+    await supabase.from('jobs').update({ status: 'encerrada' }).eq('id', jobId);
+    toast({ title: 'Vaga encerrada' });
+    fetchJobs();
+  };
+
+  const fetchCandidates = async (jobId: string) => {
+    const { data } = await supabase.from('applications').select('*').eq('job_id', jobId);
+    const apps = data ?? [];
+    const enriched: CandidateData[] = await Promise.all(
+      apps.map(async (app) => {
+        const { data: profile } = await supabase
+          .from('freelancer_profiles')
+          .select('nome, funcoes, cidade, experiencia, disponibilidade, data_nascimento, completed_jobs')
+          .eq('user_id', app.freelancer_id)
+          .maybeSingle();
+
+        const { data: reviews } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('reviewee_id', app.freelancer_id);
+
+        const ratings = (reviews as Array<{ rating: number }>) ?? [];
+        const avgRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length : 0;
+
+        return {
+          id: app.id,
+          status: app.status,
+          freelancer_id: app.freelancer_id,
+          freelancer_nome: profile?.nome ?? 'Sem nome',
+          freelancer_funcoes: profile?.funcoes ?? [],
+          freelancer_cidade: profile?.cidade ?? '',
+          freelancer_experiencia: profile?.experiencia ?? 0,
+          freelancer_disponibilidade: profile?.disponibilidade ?? [],
+          freelancer_data_nascimento: (profile as Record<string, unknown>)?.data_nascimento as string | null ?? null,
+          completed_jobs: (profile as Record<string, unknown>)?.completed_jobs as number ?? 0,
+          avgRating,
+          reviewCount: ratings.length,
+        };
+      })
+    );
+    setCandidates(enriched);
+  };
+
+  const handleToggleCandidates = async (job: JobData) => {
+    if (isMobile) {
+      setSelectedJobFuncao(job.funcao);
+      await fetchCandidates(job.id);
+      setMobileDrawerOpen(true);
+    } else {
+      if (expandedJobId === job.id) {
+        setExpandedJobId(null);
+      } else {
+        setExpandedJobId(job.id);
+        await fetchCandidates(job.id);
+      }
+    }
+  };
+
+  const handleContratar = async (appId: string) => {
+    await supabase.from('applications').update({ status: 'contratado' }).eq('id', appId);
+    toast({ title: 'Freelancer contratado!' });
+    if (expandedJobId) await fetchCandidates(expandedJobId);
+    fetchJobs();
+  };
+
+  const handleRejeitar = async (appId: string) => {
+    await supabase.from('applications').update({ status: 'recusado' }).eq('id', appId);
+    toast({ title: 'Candidatura recusada' });
+    if (expandedJobId) await fetchCandidates(expandedJobId);
+    fetchJobs();
+  };
+
+  const handleOpenFinalizar = (appId: string, freelancerId: string) => {
+    setFinalizarAppId(appId);
+    setFinalizarFreelancerId(freelancerId);
+    setRatingModalOpen(true);
+  };
+
+  const handleFinalizarComplete = async () => {
+    if (!finalizarAppId) return;
+    await supabase.from('applications').update({ status: 'aguardando_freelancer' }).eq('id', finalizarAppId);
+    toast({ title: 'Avaliação enviada! Aguardando confirmação do freelancer.' });
+    if (expandedJobId) await fetchCandidates(expandedJobId);
+    fetchJobs();
+  };
+
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    if (candidateSort === 'rating') return b.avgRating - a.avgRating;
+    return 0;
+  });
+
+  const maskName = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) return `${parts[0]} ${parts[1][0]}.`;
+    return name;
+  };
+
+  const renderCandidateCard = (c: CandidateData, index: number, jobTipo?: string) => {
+    const age = calcAge(c.freelancer_data_nascimento);
+    const dispText = parseDisponibilidade(c.freelancer_disponibilidade);
+
+    return (
+      <motion.div
+        key={c.id}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut', delay: index * 0.04 }}
+        className="border rounded-lg p-4 space-y-3"
+      >
+        <div className="flex items-start gap-3">
+          <UserAvatar type="freelancer" userId={c.freelancer_id} name={c.freelancer_nome} size={48} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium text-sm">{maskName(c.freelancer_nome)}</p>
+              {c.avgRating >= 4.5 && <Badge variant="contratado" className="text-[11px]">Recomendado</Badge>}
+              {c.avgRating > 0 && c.avgRating < 3.0 && <Badge variant="recusado" className="text-[11px]">Baixa avaliação</Badge>}
+            </div>
+            {c.avgRating > 0 && (
+              <StarRating rating={c.avgRating} reviewCount={c.reviewCount} size={14} />
+            )}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {c.freelancer_funcoes.slice(0, 3).map((f) => (
+                <Badge key={f} variant="secondary" className="text-[11px]">{f}</Badge>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 mt-2 text-[13px] text-muted-foreground flex-wrap">
+              {age !== null && (
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {age} anos
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Briefcase className="h-3 w-3" />
+                {c.freelancer_experiencia} ano{c.freelancer_experiencia !== 1 ? 's' : ''} exp.
+              </span>
+              {c.freelancer_cidade && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {c.freelancer_cidade}
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-accent font-medium">
+                <Award className="h-3 w-3" /> {c.completed_jobs} trampos concluídos
+              </span>
+            </div>
+            {dispText && (
+              <p className="text-[12px] text-muted-foreground mt-1.5 truncate">{dispText}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {c.status === 'aguardando' && (
+            <>
+              <Button size="sm" onClick={() => handleContratar(c.id)}>
+                {jobTipo === 'clt' ? 'Chamar para entrevista' : 'Contratar'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleRejeitar(c.id)}>Recusar</Button>
+            </>
+          )}
+          {c.status === 'contratado' && (
+            jobTipo === 'clt' ? (
+              <Badge variant="contratado">Em processo/Contratado</Badge>
+            ) : (
+              <Button size="sm" variant="default" onClick={() => handleOpenFinalizar(c.id, c.freelancer_id)}>Finalizar Serviço</Button>
+            )
+          )}
+          {c.status === 'aguardando_freelancer' && (
+            <Badge variant="outline" className="text-accent bg-accent/10 border-accent/20">Aguardando Freelancer</Badge>
+          )}
+          {c.status === 'concluido' && (
+            <Badge variant="contratado">Concluído</Badge>
+          )}
+          {c.status === 'recusado' && <Badge variant="encerrada">Recusado</Badge>}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderCandidateList = () => (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <p className="text-[13px] font-medium text-muted-foreground">Ordenar:</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setCandidateSort('rating')}
+            className={`text-xs px-2.5 py-1 rounded-pill border transition-colors duration-150 ${
+              candidateSort === 'rating' ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-secondary'
+            }`}
+          >
+            Melhor avaliação
+          </button>
+          <button
+            onClick={() => setCandidateSort('recent')}
+            className={`text-xs px-2.5 py-1 rounded-pill border transition-colors duration-150 ${
+              candidateSort === 'recent' ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-secondary'
+            }`}
+          >
+            Mais recente
+          </button>
+        </div>
+      </div>
+      {sortedCandidates.length === 0 ? (
+        <div className="flex flex-col items-center py-8 text-muted-foreground">
+          <FloatingIcon><SearchX className="h-8 w-8 mb-2" /></FloatingIcon>
+          <p className="text-sm">Nenhum candidato ainda.</p>
+          <p className="text-[13px]">Sua vaga está visível para os candidatos.</p>
+        </div>
+      ) : (
+        sortedCandidates.map((c, i) => {
+          const currentJob = jobs.find(j => j.id === expandedJobId);
+          return renderCandidateCard(c, i, currentJob?.tipo_vaga);
+        })
+      )}
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <h1 className="text-display">Minhas Vagas</h1>
+        <div className="grid gap-3 md:grid-cols-2">
+          {[0, 1, 2].map(i => <SkeletonCard key={i} />)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-display">Minhas Vagas</h1>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-40 bg-secondary">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas</SelectItem>
+            <SelectItem value="ativa">Ativas</SelectItem>
+            <SelectItem value="encerrada">Encerradas</SelectItem>
+            <SelectItem value="cancelada">Canceladas</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Mobile cards */}
+      <StaggerContainer className="md:hidden space-y-3">
+        {filteredJobs.map((job) => (
+          <StaggerItem key={job.id}>
+            <div className="border rounded-lg p-4 space-y-3 card-hover">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">{job.funcao}</p>
+                    {job.tipo_vaga === 'clt' ? (
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold">CLT</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-semibold">Trampo</Badge>
+                    )}
+                  </div>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                    {job.tipo_vaga === 'clt' ? 'Vaga Efetiva' : new Date(job.data_evento).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Badge variant={job.status === 'ativa' ? 'ativa' : job.status === 'cancelada' ? 'recusado' : 'encerrada'}>
+                    {job.status === 'ativa' ? 'Ativa' : job.status === 'cancelada' ? 'Cancelada' : 'Encerrada'}
+                  </Badge>
+                  {job.noCandidateAlert && (
+                    <Badge variant="ativa" className="text-[11px]">Sem candidatos</Badge>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">R$ {Number(job.valor).toFixed(2)}</span>
+                <span className="text-muted-foreground">{job.candidaturas} candidatura(s)</span>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="flex-1 btn-press" onClick={() => handleToggleCandidates(job)}>
+                  Ver Candidatos ({job.candidaturas})
+                </Button>
+                {job.status === 'ativa' && (
+                  <Button size="sm" variant="destructive" className="btn-press" onClick={() => setCancelJobId(job.id)}>
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+            </div>
+          </StaggerItem>
+        ))}
+        {filteredJobs.length === 0 && (
+          <div className="flex flex-col items-center py-8 text-muted-foreground">
+            <FloatingIcon><Briefcase className="h-8 w-8 mb-2" /></FloatingIcon>
+            <p className="text-sm">Nenhuma vaga encontrada.</p>
+          </div>
+        )}
+      </StaggerContainer>
+
+      {/* Desktop table */}
+      <div className="hidden md:block space-y-0">
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Função</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Candidaturas</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredJobs.map((job) => (
+                <React.Fragment key={job.id}>
+                  <TableRow className="transition-colors duration-150">
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {job.funcao}
+                        {job.tipo_vaga === 'clt' ? (
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold">CLT</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-semibold">Trampo</Badge>
+                        )}
+                        {job.noCandidateAlert && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge variant="ativa" className="text-[11px]">Sem candidatos</Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>Considere destacar esta vaga</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{job.tipo_vaga === 'clt' ? 'Vaga Efetiva' : new Date(job.data_evento).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell>
+                      {job.tipo_vaga === 'clt' ? (
+                        job.valor > 0 ? `R$ ${Number(job.valor).toFixed(2)}/mês` : 'A combinar'
+                      ) : (
+                        `R$ ${Number(job.valor).toFixed(2)}`
+                      )}
+                    </TableCell>
+                    <TableCell>{job.candidaturas}</TableCell>
+                    <TableCell>
+                      <Badge variant={job.status === 'ativa' ? 'ativa' : job.status === 'cancelada' ? 'recusado' : 'encerrada'}>
+                        {job.status === 'ativa' ? 'Ativa' : job.status === 'cancelada' ? 'Cancelada' : 'Encerrada'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleCandidates(job)}
+                          className="gap-1.5 btn-press"
+                        >
+                          Ver Candidatos ({job.candidaturas})
+                          {expandedJobId === job.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </Button>
+                        {job.status === 'ativa' && (
+                          <Button size="sm" variant="destructive" className="btn-press" onClick={() => setCancelJobId(job.id)}>
+                            Cancelar
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  <AnimatePresence>
+                    {expandedJobId === job.id && (
+                      <TableRow key={`${job.id}-expanded`}>
+                        <TableCell colSpan={6} className="p-0">
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="bg-secondary p-6 border-t">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-heading">Candidatos para {job.funcao}</h3>
+                                <button onClick={() => setExpandedJobId(null)} className="text-muted-foreground hover:text-foreground transition-colors duration-150">
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                              {renderCandidateList()}
+                            </div>
+                          </motion.div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </AnimatePresence>
+                </React.Fragment>
+              ))}
+              {filteredJobs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    Nenhuma vaga encontrada.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Mobile candidate drawer */}
+      <Drawer open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="text-left border-b">
+            <DrawerTitle>Candidatos para {selectedJobFuncao}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 py-4 overflow-auto">
+            {renderCandidateList()}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Cancel job confirmation */}
+      <Dialog open={cancelJobId !== null} onOpenChange={(open) => !open && setCancelJobId(null)}>
+        <DialogContent className="max-w-sm border">
+          <DialogHeader>
+            <DialogTitle>Cancelar vaga?</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground pt-2">
+              O valor pago não será estornado. Será convertido em saldo na plataforma para uso em futuras contratações.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center py-4">
+            <Wallet className="h-10 w-10 text-accent" />
+          </div>
+          <div className="space-y-2">
+            <Button variant="outline" className="w-full btn-press" onClick={() => setCancelJobId(null)}>
+              Voltar
+            </Button>
+            <Button
+              className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 btn-press"
+              onClick={() => cancelJobId && handleCancelar(cancelJobId)}
+            >
+              Confirmar cancelamento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rating Modal for finalization */}
+      {finalizarAppId && finalizarFreelancerId && user && (
+        <RatingModal
+          open={ratingModalOpen}
+          onOpenChange={setRatingModalOpen}
+          title="Avaliar Freelancer"
+          applicationId={finalizarAppId}
+          reviewerId={user.id}
+          revieweeId={finalizarFreelancerId}
+          reviewerRole="company"
+          onComplete={handleFinalizarComplete}
+        />
+      )}
+    </div>
+  );
+}
